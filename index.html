@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>수식 변환기</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3b6cf6">
+<link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Gaegu:wght@400;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <style>
@@ -77,12 +80,24 @@
   .chip { padding:3px 10px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
   .chip i { display:inline-block; width:10px; height:10px; border-radius:5px; margin-right:6px; }
 
+  /* AI 설정 · 알림 */
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:40; align-items:center; justify-content:center; padding:16px; }
+  .modalcard { background:var(--card); border-radius:14px; padding:18px 20px; width:min(520px,100%); max-height:90vh; overflow:auto; }
+  .modalcard h3 { margin:0 0 6px; }
+  .modalcard p { color:var(--muted); font-size:13px; margin:0 0 12px; line-height:1.6; }
+  .modalcard label { display:block; font-size:14px; margin:10px 0 4px; color:var(--muted); }
+  .modalcard input, .modalcard select { width:100%; font:inherit; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
+  .modalcard .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  #aiMsg { margin-top:10px; font-size:13px; min-height:18px; white-space:pre-wrap; }
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1d2330; color:#fff; padding:11px 18px; border-radius:24px; font-size:15px; z-index:50; max-width:min(92vw,560px); box-shadow:0 6px 20px rgba(0,0,0,.3); display:none; line-height:1.5; }
+  #toast.bad { background:#b3261e; }
+
   /* 단순화한 홈 화면 */
   header { position:sticky; }
   button.big { font-size:17px; padding:10px 20px; font-weight:600; }
   #menu { position:absolute; right:12px; top:calc(100% + 6px); background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.22); padding:8px; flex-direction:column; gap:6px; min-width:260px; z-index:30; }
   #menu button { text-align:left; border:0; background:transparent; padding:10px 12px; }
-  #menu button.on { background:var(--soft); font-weight:700; }
+  #menu button.on { background:var(--soft); color:var(--text); font-weight:700; }
   #menu label { padding:8px 12px; font-size:14px; color:var(--muted); display:flex; gap:10px; align-items:center; }
   #menu hr { border:0; border-top:1px solid var(--line); width:100%; margin:2px 0; }
   main.one { grid-template-columns:1fr; max-width:900px; }
@@ -148,6 +163,9 @@
     <button id="mStu">🎓 학생용 보기</button>
     <button id="mAlt">📐 다른 풀이 (그래프·도형)</button>
     <hr>
+    <button id="menuRead">🖼 스크린샷을 AI로 읽기</button>
+    <button id="menuAi">⚙ AI 설정</button>
+    <hr>
     <button id="copyPrompt2">Gemini용 형식 프롬프트 복사</button>
     <button id="sample">예시 보기</button>
     <button id="clear">지우기</button>
@@ -163,6 +181,8 @@
       <h2>Gemini 답변을 복사한 뒤, 붙여넣기만 하세요</h2>
       <p>$ 기호가 있든 없든 수식은 자동으로 예쁘게 바뀝니다.</p>
       <button id="paste2" class="primary big">📋 붙여넣기</button>
+      <button id="readBtn" class="big">🖼 스크린샷으로 가져오기 (AI)</button>
+      <p class="sub" style="margin-top:14px">Gemini에서 답변 글을 선택해 <b>공유 → 수식변환</b>을 눌러도 바로 들어옵니다.</p>
       <p class="sub"><button id="typeBtn" class="linkbtn">직접 입력하기</button> · <button id="sample2" class="linkbtn">예시로 해보기</button></p>
     </div>
   </section>
@@ -190,6 +210,31 @@
 </div>
 
 <div id="student"></div>
+
+<input type="file" id="aiFile" accept="image/*" style="display:none">
+<div id="toast"></div>
+<div id="aiDlg" class="modal" style="display:none">
+  <div class="modalcard">
+    <h3>AI 설정</h3>
+    <p>스크린샷을 AI가 읽고 정리하려면 API 키가 필요합니다. 키는 <b>이 기기의 브라우저에만</b> 저장되고, 선택한 AI 회사로만 전송됩니다. 다른 사람과 함께 쓰는 기기라면 저장하지 마세요. 키에는 사용 한도를 걸어 두는 것을 권합니다.</p>
+    <label for="aiProv">서비스</label>
+    <select id="aiProv">
+      <option value="gemini">Gemini (Google AI Studio 키)</option>
+      <option value="claude">Claude (Anthropic 키)</option>
+    </select>
+    <label for="aiKey">API 키</label>
+    <input id="aiKey" type="password" autocomplete="off" placeholder="여기에만 붙여넣으세요">
+    <label for="aiModel">모델 이름</label>
+    <input id="aiModel" autocomplete="off">
+    <div class="row">
+      <button id="aiSave" class="primary">저장</button>
+      <button id="aiTest">연결 테스트</button>
+      <button id="aiDel">키 삭제</button>
+      <button id="aiClose">닫기</button>
+    </div>
+    <div id="aiMsg"></div>
+  </div>
+</div>
 
 <div id="diag" style="display:none">
   <div class="diaghead"><b>진단</b><span style="flex:1"></span>
@@ -221,7 +266,8 @@
     <summary>1. Gemini에게 보낼 프롬프트 만들기</summary>
     <textarea id="altProblem" placeholder="문제를 여기에 적거나 붙여넣으세요"></textarea>
     <pre id="altPrompt"></pre>
-    <button id="copyAltPrompt" class="primary">문제 포함해서 프롬프트 복사</button>
+    <button id="copyAltPrompt">문제 포함해서 프롬프트 복사</button>
+    <button id="altAI" class="primary">✨ AI로 풀이 3가지 바로 만들기</button>
   </details>
   <details class="altbox" open>
     <summary>2. Gemini 답변 붙여넣기</summary>
@@ -236,7 +282,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v4 · 2026-09-20 간단한 홈 + 자동 수식 변환';
+const APP_VERSION = 'v5 · 2026-09-20 공유 받기 + AI 화면 읽기';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1226,6 +1272,12 @@ const DIAG_CHECKS = [
   }],
   ['화면', async () => ({ ok: true, info: innerWidth + 'x' + innerHeight + ' css px, 배율 ' + devicePixelRatio + ', 터치 ' + navigator.maxTouchPoints })],
   ['저장소(localStorage)', async () => { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return { ok: true, info: '사용 가능' }; }],
+  ['앱 설치·공유 받기(서비스 워커)', async () => {
+    if (!('serviceWorker' in navigator)) return { ok: false, info: '이 브라우저는 지원하지 않습니다' };
+    const regs = await navigator.serviceWorker.getRegistrations();
+    return { ok: regs.length > 0, info: regs.length ? '등록됨 (' + (navigator.serviceWorker.controller ? '적용 중' : '다음 열 때부터 적용') + ')' : '등록 안 됨 — https 주소에서 크롬으로 열어야 합니다' };
+  }],
+  ['AI 키', async () => { const c = aiCfg(); return { ok: !!c.key, info: c.key ? c.provider + ' / ' + c.model + ' 저장됨' : '아직 저장 안 함 (스크린샷 읽기에 필요)' }; }],
   ['캔버스 읽기(도형 자동 찾기)', async () => {
     const c = document.createElement('canvas'); c.width = c.height = 4;
     const g = c.getContext('2d', { willReadFrequently: true }); g.fillRect(0, 0, 4, 4);
@@ -1286,6 +1338,163 @@ $('diagCopy').onclick = async () => {
   catch (e) { const r = document.createRange(); r.selectNodeContents($('diagOut')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('diagCopy').textContent = '선택됨: 길게 눌러 복사'; }
 };
 
+/* ---------- 알림 ---------- */
+let toastT = 0;
+function toast(msg, ms = 3500, bad = false) {
+  const t = $('toast'); t.textContent = msg; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+  clearTimeout(toastT); if (ms) toastT = setTimeout(() => { t.style.display = 'none'; }, ms);
+}
+
+/* ---------- AI 연동 (스크린샷 읽기 · 풀이 만들기) ---------- */
+const AI_DEFAULTS = { gemini: 'gemini-2.5-flash', claude: 'claude-sonnet-5' };
+let pendingImage = null;
+function aiCfg() {
+  try {
+    const p = localStorage.getItem('aiProvider') || 'gemini';
+    return { provider: p, key: localStorage.getItem('aiKey_' + p) || '', model: localStorage.getItem('aiModel_' + p) || AI_DEFAULTS[p] };
+  } catch (e) { return { provider: 'gemini', key: '', model: AI_DEFAULTS.gemini }; }
+}
+async function imageToB64(img, max = 1600) {       // Blob 또는 canvas → 줄인 JPEG(base64)
+  let w, h, draw;
+  if (img instanceof HTMLCanvasElement) { w = img.width; h = img.height; draw = (g, W, H) => g.drawImage(img, 0, 0, W, H); }
+  else { const bmp = await createImageBitmap(img); w = bmp.width; h = bmp.height; draw = (g, W, H) => g.drawImage(bmp, 0, 0, W, H); }
+  const sc = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc));
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); draw(g, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.9).split(',')[1];
+}
+function aiErrText(status, msg) {
+  if (status === 401 || status === 403) return '키가 올바르지 않거나 이 모델을 쓸 권한이 없어요. AI 설정에서 키를 다시 확인해 주세요.';
+  if (status === 404) return '모델 이름을 찾지 못했어요. AI 설정의 모델 이름을 확인해 주세요.';
+  if (status === 429) return '사용 한도를 넘었어요. 잠시 뒤 다시 시도하거나 요금·한도를 확인해 주세요.';
+  if (status >= 500) return 'AI 서버가 일시적으로 불안정해요. 잠시 뒤 다시 시도해 주세요.';
+  return 'AI가 요청을 처리하지 못했어요 (' + status + ')' + (msg ? ': ' + String(msg).slice(0, 160) : '');
+}
+async function aiAsk(prompt, image) {
+  const cfg = aiCfg();
+  if (!cfg.key) throw Object.assign(new Error('AI 키가 없어요'), { noKey: true });
+  const b64 = image ? await imageToB64(image) : null;
+  let res;
+  try {
+    if (cfg.provider === 'gemini') {
+      const parts = [{ text: prompt }];
+      if (b64) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
+      res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.model) + ':generateContent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
+        body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.2 } }),
+      });
+    } else {
+      const content = [];
+      if (b64) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
+      content.push({ type: 'text', text: prompt });
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: cfg.model, max_tokens: 8000, messages: [{ role: 'user', content }] }),
+      });
+    }
+  } catch (e) { throw new Error('AI 서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.'); }
+  let data = null; try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(aiErrText(res.status, data && data.error && (data.error.message || data.error)));
+  const text = cfg.provider === 'gemini'
+    ? ((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).map(p => p.text || '').join('')
+    : ((data.content) || []).map(p => p.text || '').join('');
+  if (!text.trim()) throw new Error('AI가 빈 답을 보냈어요. 다시 시도해 주세요.');
+  return text.trim().replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '');
+}
+
+const READ_PROMPT = [
+  '이 이미지는 AI 수학 풀이 대화 화면을 캡처한 것이다.',
+  '화면에 보이는 AI의 답변 본문을 빠짐없이 그대로 옮겨 적어라.',
+  '- 요약하거나 새로 풀지 말고, 보이는 글만 옮긴다. 오타처럼 보여도 고치지 않는다.',
+  '- 수식은 LaTeX로 쓴다. 문장 속 수식은 $...$, 따로 한 줄을 차지하는 수식은 $$...$$.',
+  '- 사이드바, 메뉴, 버튼, 입력창, 시간·배터리 표시 같은 화면 UI 글자는 제외한다.',
+  '- 원문에 "1단계", "①" 같은 단계 표시가 있으면 유지하고, 없으면 만들지 않는다.',
+  '- 다른 설명이나 인사말 없이, 옮겨 적은 글만 출력한다.',
+].join('\n');
+
+async function aiReadScreen(blob) {
+  try {
+    toast('AI가 화면을 읽는 중… (10~30초)', 0);
+    const text = await aiAsk(READ_PROMPT, blob);
+    src.value = text; setView('edit'); update(); window.scrollTo(0, 0);
+    toast('읽기 완료! 수식으로 바꿨어요.');
+  } catch (e) {
+    if (e.noKey) { pendingImage = blob; openAiDlg('스크린샷을 읽으려면 AI 키가 필요해요. 키를 저장하면 바로 읽어 드려요.'); toast('AI 키를 먼저 저장해 주세요.', 3000, true); }
+    else { toast(e.message, 7000, true); noteErr('AI', e.message); }
+  }
+}
+function handleImage(blob) {
+  if (!aiCfg().key) { pendingImage = blob; openAiDlg('스크린샷을 읽으려면 AI 키가 필요해요. 키를 저장하면 바로 읽어 드려요.'); return; }
+  aiReadScreen(blob);
+}
+
+/* AI 설정 창 */
+function openAiDlg(msg) {
+  const cfg = aiCfg();
+  $('aiProv').value = cfg.provider; $('aiKey').value = cfg.key; $('aiModel').value = cfg.model;
+  $('aiMsg').textContent = msg || ''; $('aiMsg').style.color = '';
+  $('aiDlg').style.display = 'flex';
+}
+function aiSaveForm() {
+  const p = $('aiProv').value;
+  try {
+    localStorage.setItem('aiProvider', p);
+    localStorage.setItem('aiKey_' + p, $('aiKey').value.trim());
+    localStorage.setItem('aiModel_' + p, $('aiModel').value.trim() || AI_DEFAULTS[p]);
+  } catch (e) { $('aiMsg').textContent = '이 브라우저에서는 저장할 수 없어요.'; return false; }
+  return true;
+}
+$('aiProv').onchange = () => { const p = $('aiProv').value; let k = '', m = AI_DEFAULTS[p]; try { k = localStorage.getItem('aiKey_' + p) || ''; m = localStorage.getItem('aiModel_' + p) || m; } catch (e) {} $('aiKey').value = k; $('aiModel').value = m; };
+$('aiSave').onclick = () => {
+  if (!aiSaveForm()) return;
+  $('aiMsg').style.color = ''; $('aiMsg').textContent = '저장했어요.';
+  if (pendingImage && aiCfg().key) { const b = pendingImage; pendingImage = null; $('aiDlg').style.display = 'none'; aiReadScreen(b); }
+};
+$('aiDel').onclick = () => { const p = $('aiProv').value; try { localStorage.removeItem('aiKey_' + p); } catch (e) {} $('aiKey').value = ''; $('aiMsg').textContent = '키를 삭제했어요.'; };
+$('aiClose').onclick = () => { $('aiDlg').style.display = 'none'; };
+$('aiTest').onclick = async () => {
+  if (!aiSaveForm()) return;
+  $('aiMsg').style.color = ''; $('aiMsg').textContent = '연결 확인 중…';
+  try { const r = await aiAsk('숫자 2와 3을 더한 값만 숫자로 답해.'); $('aiMsg').style.color = '#1f9d55'; $('aiMsg').textContent = '연결됐어요. (AI 응답: ' + r.slice(0, 40) + ')'; }
+  catch (e) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = e.noKey ? '키를 입력해 주세요.' : e.message; }
+};
+
+/* 다른 풀이: 프롬프트와 (있으면) 도형 이미지를 AI에 바로 보내 3가지 풀이를 만든다 */
+$('altAI').onclick = async () => {
+  const problem = $('altProblem').value.trim();
+  if (!problem && !capCanvasOut) { toast('문제를 적거나 도형 이미지를 먼저 넣어 주세요.', 4000, true); return; }
+  const prompt = $('altPrompt').textContent.replace('(여기에 문제를 붙여넣으세요)', '(첨부 이미지의 문제)');
+  try {
+    toast('AI가 풀이 3가지를 만드는 중… (20~60초)', 0);
+    const text = await aiAsk(prompt, capCanvasOut);
+    $('altSrc').value = text; altIdx = 0; renderAlt(); toast('완료! 아래에서 풀이를 확인하세요.');
+    $('altOut').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    if (e.noKey) { openAiDlg('풀이를 만들려면 AI 키가 필요해요.'); toast('AI 키를 먼저 저장해 주세요.', 3000, true); }
+    else { toast(e.message, 7000, true); noteErr('AI', e.message); }
+  }
+};
+
+/* ---------- 다른 앱에서 "공유"로 들어온 내용 받기 ---------- */
+async function takeShared() {
+  if (!/[?&]shared=1/.test(location.search)) return;
+  history.replaceState(null, '', location.pathname);
+  try {
+    const c = await caches.open('share');
+    const t = await c.match('text'), im = await c.match('image');
+    const text = t ? (await t.text()).trim() : '', blob = im ? await im.blob() : null;
+    await caches.delete('share');
+    if (blob) { handleImage(blob); return; }
+    if (!text) { toast('공유된 내용이 비어 있어요.', 4000, true); return; }
+    if (/^https?:\/\/\S+$/.test(text)) { toast('링크만 공유됐어요. 답변 글을 길게 눌러 선택한 뒤 공유하거나, 복사해서 붙여넣어 주세요.', 8000, true); return; }
+    src.value = text; setView('edit'); update(); toast('공유한 글을 가져왔어요.');
+  } catch (e) { noteErr('공유 받기', e.message); }
+}
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(e => noteErr('서비스 워커', e.message));
+}
+
 /* ---------- 모드 · 이벤트 ---------- */
 function setView(v) {
   document.body.classList.toggle('student', v === 'student');
@@ -1306,9 +1515,18 @@ function update() {
 function openSrc() { $('srcBox').open = true; src.focus(); }
 async function doPaste() {
   try {
-    src.value = await navigator.clipboard.readText();
-    if (!src.value.trim()) { alert('클립보드가 비어 있습니다. Gemini 답변을 먼저 복사해 주세요.'); return; }
-    setView('edit'); update(); window.scrollTo(0, 0);
+    let text = '', img = null;
+    if (navigator.clipboard.read) {
+      try {
+        for (const it of await navigator.clipboard.read()) {
+          if (!img) { const ty = it.types.find(x => x.startsWith('image/')); if (ty) img = await it.getType(ty); }
+          if (!text && it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
+        }
+      } catch (e) { text = await navigator.clipboard.readText(); }
+    } else text = await navigator.clipboard.readText();
+    if (text.trim()) { src.value = text; setView('edit'); update(); window.scrollTo(0, 0); return; }
+    if (img) { handleImage(img); return; }
+    alert('클립보드가 비어 있습니다. Gemini 답변이나 스크린샷을 먼저 복사해 주세요.');
   } catch (e) {
     setView('edit'); openSrc();
     alert('붙여넣기 권한이 없어요. 열린 칸을 길게 눌러 “붙여넣기”를 선택해 주세요.');
@@ -1341,6 +1559,10 @@ $('sample2').onclick = $('sample').onclick;
 $('clear').onclick = () => { src.value = ''; setView('edit'); update(); };
 $('paste').onclick = doPaste;
 $('paste2').onclick = doPaste;
+$('readBtn').onclick = () => $('aiFile').click();
+$('menuRead').onclick = () => $('aiFile').click();
+$('menuAi').onclick = () => openAiDlg('');
+$('aiFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) handleImage(f); };
 $('typeBtn').onclick = openSrc;
 $('toStu').onclick = () => setMode(true);
 $('copyPrompt2').onclick = () => $('copyPrompt').click();
@@ -1359,6 +1581,7 @@ out.style.fontSize = '22px'; stu.style.fontSize = '22px';
 
 try { src.value = localStorage.getItem('src') || ''; } catch (e) {}
 update();
+takeShared();
 </script>
 </body>
 </html>
