@@ -34,6 +34,22 @@ const RULES = [
   '8. slider, move, sweep은 학생이 이해하는 데 도움이 될 때만 풀이당 1~2개 쓴다. move/sweep은 앞에서 정의한 f, g, h 이름을 쓰고, 줄 끝에 @2를 붙이면 그 단계에서 저절로 움직인다.',
 ].join('\n');
 
+const CHAT_RULES = [
+  '형식 규칙:',
+  '1. 등급별로 3개 구간을 만든다. 각 구간은 "### 4~5등급 발문", "### 2~3등급 발문", "### 1등급 30초컷" 줄로 시작한다.',
+  '2. 구간 안은 선생님(T)과 학생(S)이 카카오톡으로 대화하듯, 한 줄에 말풍선 하나씩 쓴다.',
+  '   T: 선생님의 짧은 발문(질문은 한 번에 한 가지) / S: 학생의 짧은 대답',
+  '   T와 S를 번갈아 8~12줄. 마지막 T는 정답을 확인해 준다. 수식은 LaTeX($...$)로 쓴다.',
+  '3. 등급별 차이:',
+  '   - 4~5등급 발문: 개념과 계산을 아주 잘게 쪼갠 쉬운 질문. 학생이 한 걸음씩 스스로 답하게 한다.',
+  '   - 2~3등급 발문: 조건을 어떻게 쓸지, 풀이 흐름이 왜 그런지를 묻는 발문.',
+  '   - 1등급 30초컷: 핵심만 짚는 빠른 풀이. 지름길, 검산, 시간을 줄이는 요령.',
+  '4. 각 구간 끝에 정리 줄을 쓴다. 한 줄에 하나씩.',
+  '   ! 자주 틀리는 포인트: (학생들이 실제로 자주 하는 실수. 1~3개)',
+  '   * 핵심 포인트: (다시 봐야 할 핵심. 1~3개)',
+  '5. 코드블록 기호와 인사말은 쓰지 않는다.',
+].join('\n');
+
 function buildPrompt(hasImage, problemText, solutionText) {
   return [
     '너는 한국 수학 교사를 돕는 조수다.',
@@ -53,6 +69,10 @@ function buildPrompt(hasImage, problemText, solutionText) {
     '이 문제를 그래프·도형 중심으로, 서로 다른 2가지 방법으로 푼다.',
     RULES,
     '',
+    '=====등급별대화=====',
+    '(2)에서 정리한 풀이를 바탕으로, 선생님과 학생이 카카오톡으로 대화하듯 진행하는 "등급별 대화 풀이"를 만든다.',
+    CHAT_RULES,
+    '',
     problemText ? '[문제 글]\n' + problemText + '\n' : '',
     '[다른 AI의 풀이 글]\n' + solutionText,
   ].filter(x => x !== '').join('\n');
@@ -63,7 +83,8 @@ function parseSections(raw) {
     const re = new RegExp('=====' + name + '=====\\s*([\\s\\S]*?)(?=\\n?=====(?:' + next + ')=====|$)');
     const m = raw.match(re); return m ? m[1].trim() : '';
   };
-  return { problem: grab('문제', '풀이|다른풀이'), solution: grab('풀이', '문제|다른풀이'), alternatives: grab('다른풀이', '문제|풀이') };
+  const ALL = '문제|풀이|다른풀이|등급별대화';
+  return { problem: grab('문제', ALL), solution: grab('풀이', ALL), alternatives: grab('다른풀이', ALL), chat: grab('등급별대화', ALL) };
 }
 
 function timingSafeEqual(a, b) {
@@ -82,7 +103,7 @@ async function callAI(env, prompt, imageB64) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': env.AI_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 8000, messages: [{ role: 'user', content }] }),
+      body: JSON.stringify({ model, max_tokens: 12000, messages: [{ role: 'user', content }] }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error('AI ' + res.status + ' ' + ((data && data.error && data.error.message) || ''));

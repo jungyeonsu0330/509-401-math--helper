@@ -147,16 +147,44 @@
   @media (max-width:900px) { .hw { grid-template-columns:1fr; } }
   .hwfig { height:420px; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
   .hwfig img { max-width:100%; max-height:100%; object-fit:contain; }
-  .hwpaper { position:relative; min-height:420px; padding:18px 22px 18px 46px; background:#fffdf6; border:1px solid #e6dfc8; border-radius:12px; color:#1b2a6b;
-             font-family:"Nanum Pen Script","Gaegu","Segoe Print",cursive; font-size:1.5em; line-height:1.55; }
-  .hwpaper::before { content:''; position:absolute; left:34px; top:0; bottom:0; width:2px; background:#f0a8a8; }
-  .hwline { width:fit-content; max-width:100%; margin:0 0 .25em; transform-origin:left center; }
-  .hwline p { margin:0; }
-  .hwline .katex { color:#1b2a6b; font-size:0.9em; }
-  .hwline .katex-display { margin:.2em 0; }
-  .hwn { color:#d33; border-bottom:2px solid #d33; padding:0 .15em; }
-  .hwline.ans { border:2.5px solid #d33; border-radius:50% / 45%; padding:.05em 1em; margin-top:.5em; }
-  .pen { position:absolute; pointer-events:none; display:none; font-size:22px; transform:translate(-3px,-85%); z-index:2; font-family:system-ui,sans-serif; }
+  /* 등급별 카톡 대화 풀이 */
+  .row2 { display:flex; gap:8px; flex-wrap:wrap; }
+  .ksetup { margin-top:10px; }
+  .ksetup p { font-size:13px; color:var(--muted); line-height:1.7; margin:8px 0; }
+  .ksetup textarea { width:100%; height:auto; min-height:110px; border:1px solid var(--line); border-radius:8px; padding:8px; margin:8px 0; font:14px/1.5 ui-monospace,Consolas,monospace; background:var(--bg); color:var(--text); }
+  .kphone { border-radius:18px; overflow:hidden; border:1px solid #cfc6da; background:#ebe3f4; box-shadow:0 10px 28px rgba(80,50,120,.18); }
+  .ktabs { display:flex; gap:6px; padding:10px; background:#060b18; overflow-x:auto; }
+  .ktabs button { flex:1 0 auto; border:0; background:transparent; color:#9aa6bd; font-weight:700; font-size:15px; padding:10px 14px; border-radius:12px; white-space:nowrap; }
+  .ktabs button.on { background:#34404f; color:#ffd84d; }
+  .kchat { height:430px; overflow-y:auto; padding:12px 12px 16px; font-family:"Gaegu","Nanum Pen Script","Malgun Gothic",sans-serif; font-weight:700; font-size:1.3em; color:#222; text-align:left; }
+  .kdate { text-align:center; margin:4px auto 12px; font-size:.62em; color:#fff; background:rgba(100,80,130,.4); border-radius:14px; padding:3px 14px; width:fit-content; font-family:system-ui,sans-serif; font-weight:400; }
+  .kmsg { display:flex; margin:10px 0; align-items:flex-start; gap:8px; }
+  .kmsg.s { justify-content:flex-end; }
+  .kava { width:38px; height:38px; border-radius:15px; background:#fff; display:grid; place-items:center; font-size:22px; flex:none; }
+  .kcol { display:flex; flex-direction:column; min-width:0; max-width:calc(100% - 50px); }
+  .kname { font-size:.62em; color:#5b5566; margin:0 0 3px 2px; font-family:system-ui,sans-serif; font-weight:400; }
+  .kbrow { display:flex; align-items:flex-end; gap:6px; }
+  .kmsg.s .kbrow { max-width:88%; }
+  .kb { padding:10px 14px; border-radius:16px; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere; }
+  .kmsg.t .kb { background:#dedae4; border-top-left-radius:4px; }
+  .kmsg.s .kb { background:#fee500; border-top-right-radius:4px; }
+  .kb .katex { font-size:.92em; }
+  .kv { opacity:.4; margin-right:8px; letter-spacing:-2px; font-family:system-ui,sans-serif; font-weight:700; font-size:.8em; }
+  .ktime { font-size:.5em; color:#6f6879; white-space:nowrap; font-family:system-ui,sans-serif; font-weight:400; }
+  .typing .kb { display:flex; gap:5px; padding:14px 16px; }
+  .typing .kb i { width:7px; height:7px; border-radius:50%; background:#8d8797; animation:kdot 1s infinite ease-in-out; }
+  .typing .kb i:nth-child(2) { animation-delay:.15s; } .typing .kb i:nth-child(3) { animation-delay:.3s; }
+  @keyframes kdot { 0%,80%,100% { transform:translateY(0); opacity:.4; } 40% { transform:translateY(-5px); opacity:1; } }
+  .pop { animation:kpop .28s ease-out; }
+  @keyframes kpop { from { opacity:0; transform:translateY(10px) scale(.96); } to { opacity:1; transform:none; } }
+  .krecwrap { margin-top:16px; }
+  .krec { background:#fff; border-radius:14px; padding:12px 16px; margin:10px 0; font-family:system-ui,"Noto Sans KR",sans-serif; font-weight:400; font-size:.68em; line-height:1.7; border-left:6px solid #fee500; }
+  .krec b { display:block; margin-bottom:4px; font-size:1.05em; }
+  .krec.warn { border-left-color:#f0654f; } .krec.warn b { color:#d23b27; }
+  .krec.key { border-left-color:#1f9d55; } .krec.key b { color:#137a40; }
+  .krec ul { margin:0; padding-left:20px; }
+  .kctl { display:flex; gap:8px; padding:10px 12px; background:#f6f1fb; border-top:1px solid #dcd2e8; align-items:center; flex-wrap:wrap; }
+  .kctl select { font:inherit; padding:7px; border-radius:8px; border:1px solid #cfc6da; background:#fff; color:#222; }
 
   @media print {
     header, main, .hint, .promptbox, .bar, .card.locked { display:none !important; }
@@ -219,7 +247,7 @@
     </div>
   </details>
   <section id="resultSec">
-    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toHand">✍ 손글씨로 보기</button><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
+    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toHand">✍ 손글씨 풀이</button><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
     <div id="out" class="math-text"></div>
     <div id="homeHand" style="display:none"></div>
   </section>
@@ -323,7 +351,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v8 · 2026-09-20 홈에서 손글씨 풀이';
+const APP_VERSION = 'v9 · 2026-09-20 등급별 카톡 대화 풀이';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -592,11 +620,6 @@ function scrollLast() {
 
 /* ---------- 다른 풀이: 그래프·도형 ---------- */
 const COLORS = ['#2563eb', '#e11d48', '#059669', '#d97706', '#7c3aed'];
-const ENGINES = {
-  jsx:     { name: 'JSXGraph', tag: '가볍고 무료' },
-  ggb:     { name: 'GeoGebra', tag: '기능 가장 많음' },
-  desmos:  { name: 'Desmos',   tag: '함수 그래프 특화' },
-};
 const ALT_PROMPT = [
   '아래 문제를 "그래프와 도형 중심"으로, 서로 다른 3가지 풀이로 풀어줘.',
   '',
@@ -955,43 +978,6 @@ async function drawJSX(box, sp, opts) {
   return ctl;
 }
 
-/* --- GeoGebra --- */
-async function drawGGB(box, sp) {
-  await loadScript('https://www.geogebra.org/apps/deployggb.js');
-  box.innerHTML = '';
-  const id = 'ggb' + Math.random().toString(36).slice(2);
-  const d = document.createElement('div'); d.id = id; box.appendChild(d);
-  await new Promise((res, rej) => {
-    const timer = setTimeout(() => rej(new Error('GeoGebra 응답 시간 초과')), 20000);
-    const app = new GGBApplet({
-      appName: 'classic', perspective: 'G', width: box.clientWidth, height: box.clientHeight,
-      showToolBar: false, showAlgebraInput: false, showMenuBar: false, showResetIcon: false, enableRightClick: false,
-      appletOnLoad(api) {
-        try {
-          clearTimeout(timer);
-          api.setCoordSystem(sp.x[0], sp.x[1], sp.y[0], sp.y[1]);
-          api.setGridVisible(true);
-          (sp.sliders || []).forEach(s => api.evalCommand(s.name + '=' + s.min));       // 움직임은 JSXGraph에서만: 여기서는 시작 값으로 그린다
-          sp.fns.forEach(f => api.evalCommand(f.label + '(x)=' + f.plain.replace(/\blog\(/g, 'log10(')));
-          sp.vlines.forEach(a => api.evalCommand('x=' + a));
-          sp.hlines.forEach(a => api.evalCommand('y=' + a));
-          sp.polys.forEach(p => api.evalCommand('Polygon(' + p.map(q => '(' + q[0] + ',' + q[1] + ')').join(',') + ')'));
-          sp.circles.forEach(c => api.evalCommand('Circle((' + c[0] + ',' + c[1] + '),' + c[2] + ')'));
-          sp.segs.forEach(s => api.evalCommand('Segment((' + s[0] + ',' + s[1] + '),(' + s[2] + ',' + s[3] + '))'));
-          sp.points.forEach((p, i) => {
-            const nm = p.label && /^[A-Za-z][A-Za-z0-9_]*$/.test(p.label) ? p.label : 'P' + (i + 1);
-            api.evalCommand(nm + '=(' + p.x + ',' + p.y + ')');
-            api.setLabelVisible(nm, !!p.label);
-          });
-          res();
-        } catch (e) { rej(e); }
-      },
-    }, true);
-    app.inject(id);
-  });
-}
-
-/* --- Desmos --- */
 function replaceCall(s, name, fn) {
   const re = new RegExp('(^|[^a-z])' + name + '\\(');
   let m;
@@ -1004,43 +990,8 @@ function replaceCall(s, name, fn) {
   }
   return s;
 }
-function toDesmos(plain) {
-  let s = plain;
-  s = replaceCall(s, 'sqrt', a => '\\sqrt{' + a + '}');
-  s = replaceCall(s, 'abs', a => '\\left|' + a + '\\right|');
-  s = replaceCall(s, 'exp', a => 'e^{' + a + '}');
-  s = s.replace(/\b(asin|acos|atan)\(/g, (m, n) => '\\arc' + n.slice(1) + '(')
-       .replace(/\b(sin|cos|tan|ln|log)\(/g, '\\$1(')
-       .replace(/\bpi\b/g, '\\pi ')
-       .replace(/\^(\([^()]*\)|-?[\w.]+)/g, (m, a) => '^{' + a.replace(/^\(|\)$/g, '') + '}')
-       .replace(/\*/g, '\\cdot ');
-  return s;
-}
-async function drawDesmos(box, sp) {
-  await loadScript('https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6');
-  box.innerHTML = '';
-  const calc = Desmos.GraphingCalculator(box, { expressions: false, settingsMenu: false, keypad: false, zoomButtons: true });
-  calc.setMathBounds({ left: sp.x[0], right: sp.x[1], bottom: sp.y[0], top: sp.y[1] });
-  let n = 0; const id = () => 'e' + (++n);
-  (sp.sliders || []).forEach(s => calc.setExpression({ id: id(), latex: s.name + '=' + s.min, sliderBounds: { min: String(s.min), max: String(s.max), step: '' } }));
-  sp.fns.forEach((f, i) => calc.setExpression({ id: id(), latex: f.label + '(x)=' + toDesmos(f.plain), color: COLORS[i % 5] }));
-  sp.vlines.forEach(a => calc.setExpression({ id: id(), latex: 'x=' + a, color: '#888888', lineStyle: Desmos.Styles.DASHED }));
-  sp.hlines.forEach(a => calc.setExpression({ id: id(), latex: 'y=' + a, color: '#888888', lineStyle: Desmos.Styles.DASHED }));
-  sp.polys.forEach(p => calc.setExpression({ id: id(), latex: '\\operatorname{polygon}(' + p.map(q => '(' + q[0] + ',' + q[1] + ')').join(',') + ')', color: '#2563eb', fillOpacity: 0.15 }));
-  sp.circles.forEach(c => calc.setExpression({ id: id(), latex: '(x-(' + c[0] + '))^2+(y-(' + c[1] + '))^2=' + c[2] + '^2', color: '#e11d48' }));
-  sp.segs.forEach(s => calc.setExpression({
-    id: id(), latex: '(' + s[0] + '+(' + (s[2] - s[0]) + ')t,' + s[1] + '+(' + (s[3] - s[1]) + ')t)',
-    parametricDomain: { min: '0', max: '1' }, color: '#d97706', lineWidth: 3,
-  }));
-  sp.points.forEach(p => calc.setExpression({
-    id: id(), latex: '(' + p.x + ',' + p.y + ')', color: '#111111', showLabel: !!p.label, label: p.label, pointStyle: Desmos.Styles.POINT,
-  }));
-}
-
 /* --- 화면 --- */
-const DRAW = { jsx: drawJSX, ggb: drawGGB, desmos: drawDesmos };
-let altSols = [], altIdx = 0, altView = 'compare', altToken = 0;
-const picked = () => { try { return localStorage.getItem('pickEngine') || ''; } catch (e) { return ''; } };
+let altSols = [], altIdx = 0, altView = 'jsx', altToken = 0;
 
 function solutionHTML(sol) {
   const r = parseAny(sol.text);
@@ -1056,65 +1007,50 @@ function legendHTML(sp) {
 }
 
 function renderAlt() {
+  if (chatCtx) kPause();
   const o = $('altOut');
   altSols = parseSolutions($('altSrc').value);
   if (!altSols.length) { o.innerHTML = '<div class="empty">2번 칸에 Gemini 답변을 붙여넣거나 “예시”를 눌러 보세요.</div>'; return; }
   altIdx = Math.min(altIdx, altSols.length - 1);
-  const sol = altSols[altIdx], sp = sol.spec, pk = picked();
+  const sol = altSols[altIdx], sp = sol.spec, chat = altView === 'chat';
 
   let html = '<div class="tabs">';
   altSols.forEach((s, i) => { html += '<button data-sol="' + i + '" class="' + (i === altIdx ? 'on' : '') + '">' + esc(s.title) + '</button>'; });
-  html += '</div><div class="tabs"><span style="color:var(--muted);font-size:13px">그리는 방식</span><div class="seg">';
-  html += '<button data-view="compare" class="' + (altView === 'compare' ? 'on' : '') + '">3개 비교</button>';
-  Object.keys(ENGINES).forEach(k => { html += '<button data-view="' + k + '" class="' + (altView === k ? 'on' : '') + '">' + ENGINES[k].name + (pk === k ? ' ★' : '') + '</button>'; });
-  html += '<button data-view="hand" class="' + (altView === 'hand' ? 'on' : '') + '">✍ 손글씨 풀이</button>';
+  html += '</div><div class="tabs"><span style="color:var(--muted);font-size:13px">보기</span><div class="seg">';
+  html += '<button data-view="jsx" class="' + (!chat ? 'on' : '') + '">📈 그래프·도형</button>';
+  html += '<button data-view="chat" class="' + (chat ? 'on' : '') + '">✍ 손글씨 풀이</button>';
   html += '</div></div>';
-  const hand = altView === 'hand';
 
-  if (hand) {
-    html += hwShell(sol);
+  if (chat) {
+    html += '<div id="chatHost"></div>';
   } else if (sp.empty) {
     html += '<div class="card locked">이 풀이에는 그림 정보(@graph)가 없습니다.</div>';
   } else {
-    const list = altView === 'compare' ? Object.keys(ENGINES) : [altView];
     html += legendHTML(sp);
-    html += '<div class="gwrap ' + (altView === 'compare' ? 'cmp' : 'one') + '">';
-    list.forEach(k => {
-      html += '<div class="gpanel' + (pk === k ? ' picked' : '') + '"><div class="ghead"><b>' + ENGINES[k].name + '</b><span class="chip">' + ENGINES[k].tag + '</span>' +
-              '<button data-pick="' + k + '"' + (pk === k ? ' class="on"' : '') + '>' + (pk === k ? '선택됨' : '이걸로 선택') + '</button></div>' +
-              '<div class="gbox" id="gb-' + k + '"></div><div class="gnote" id="gn-' + k + '">불러오는 중…</div>' +
-              (k === 'jsx' && sp.anim ? '<div class="animbar" id="ab-jsx"></div>' : '') + '</div>';
-    });
-    html += '</div>';
+    html += '<div class="gwrap one"><div class="gpanel"><div class="ghead"><b>JSXGraph</b><span class="chip">움직이는 그래프</span></div>' +
+            '<div class="gbox" id="gb-jsx"></div><div class="gnote" id="gn-jsx">불러오는 중…</div>' +
+            (sp.anim ? '<div class="animbar" id="ab-jsx"></div>' : '') + '</div></div>';
   }
   if (sp.warn.length) html += '<div class="card locked" style="text-align:left;color:#d33">그림 정보 확인 필요:<br>' + sp.warn.map(esc).join('<br>') + '</div>';
-  if (!hand) html += solutionHTML(sol);
+  if (!chat) html += solutionHTML(sol);
   o.innerHTML = html;
   o.style.fontSize = $('size').value + 'px';
 
   o.querySelectorAll('[data-sol]').forEach(b => b.onclick = () => { altIdx = +b.dataset.sol; renderAlt(); });
   o.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { altView = b.dataset.view; renderAlt(); });
-  o.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-    try { localStorage.setItem('pickEngine', b.dataset.pick); } catch (e) {}
-    altView = b.dataset.pick; renderAlt();
-  });
 
-  if (hand) hwInit(sol);
+  if (chat) chatMount($('chatHost'), sol.text, sp, $('altProblem').value.trim());
   else if (!sp.empty) {
-    const token = ++altToken;
+    const token = ++altToken, note = $('gn-jsx');
     (async () => {
-      for (const k of (altView === 'compare' ? Object.keys(ENGINES) : [altView])) {
-        if (token !== altToken) return;
-        const note = $('gn-' + k);
-        try {
-          const ctl = await DRAW[k]($('gb-' + k), sp); if (note) note.textContent = '완료';
-          if (k === 'jsx' && ctl && ctl.hasAnim && token === altToken) animBar(ctl, $('ab-jsx'));
-        }
-        catch (e) { if (note) { note.textContent = '표시 실패: ' + e.message; note.classList.add('bad'); } }
-      }
+      try {
+        const ctl = await drawJSX($('gb-jsx'), sp); if (note) note.textContent = '완료';
+        if (ctl && ctl.hasAnim && token === altToken) animBar(ctl, $('ab-jsx'));
+      } catch (e) { if (note) { note.textContent = '표시 실패: ' + e.message; note.classList.add('bad'); } }
     })();
   }
 }
+
 /* JSXGraph 움직임 재생 바: 재생·멈춤, 처음으로, 진행도 끌기, 속도 */
 function animBar(ctl, el) {
   if (!el) return;
@@ -1293,140 +1229,227 @@ $('capCopy').onclick = async () => {
   }
 };
 
-/* ---------- 손글씨 풀이 애니메이션 ---------- */
-const hw = { units: [], i: 0, playing: false, speed: 1, token: 0, sp: null, mode: '', curStep: 0, figStep: -1, figP: Promise.resolve() };
-const sleep = (ms, tok) => new Promise(r => setTimeout(() => r(tok === hw.token), ms));
+/* ---------- ✍ 손글씨 풀이: 등급별 카톡 대화 ---------- */
+const CHAT_RULES = [
+  '형식 규칙 (반드시 지켜줘):',
+  '1. 등급별로 3개 구간을 만든다. 각 구간은 "### 4~5등급 발문", "### 2~3등급 발문", "### 1등급 30초컷" 줄로 시작한다.',
+  '2. 구간 안은 선생님(T)과 학생(S)이 카카오톡으로 대화하듯, 한 줄에 말풍선 하나씩 쓴다.',
+  '   T: 선생님의 짧은 발문(질문은 한 번에 한 가지)   /   S: 학생의 짧은 대답',
+  '   T와 S를 번갈아 8~12줄. 마지막 T는 정답을 확인해 준다. 수식은 LaTeX($...$)로 쓴다.',
+  '3. 등급별 차이:',
+  '   - 4~5등급 발문: 개념과 계산을 아주 잘게 쪼갠 쉬운 질문. 학생이 한 걸음씩 스스로 답하게 한다.',
+  '   - 2~3등급 발문: 조건을 어떻게 쓸지, 풀이 흐름이 왜 그런지를 묻는 발문.',
+  '   - 1등급 30초컷: 핵심만 짚는 빠른 풀이. 지름길, 검산, 시간을 줄이는 요령.',
+  '4. 각 구간 끝에 정리 줄을 쓴다. 한 줄에 하나씩.',
+  '   ! 자주 틀리는 포인트: (학생들이 실제로 자주 하는 실수. 1~3개)',
+  '   * 핵심 포인트: (다시 봐야 할 핵심. 1~3개)',
+  '5. 코드블록 기호와 인사말은 쓰지 않는다.',
+].join('\n');
+const chatPrompt = body => ['아래 수학 문제와 풀이를 바탕으로 "등급별 대화 풀이"를 만들어줘. 선생님과 학생이 카카오톡으로 대화하듯 짧은 말풍선으로 진행한다.', '', '[문제 · 풀이]', body, '', CHAT_RULES].join('\n');
 
-function blocksOf(text) {   // $$ 블록은 한 덩어리, 나머지는 줄 단위
-  const out = []; let buf = null, open = false;
-  for (const ln of text.split('\n')) {
-    const n = (ln.match(/\$\$/g) || []).length;
-    if (open) { buf.push(ln); if (n % 2 === 1) { open = false; out.push(buf.join('\n')); buf = null; } continue; }
-    if (!ln.trim()) continue;
-    if (n % 2 === 1) { open = true; buf = [ln]; continue; }
-    out.push(ln);
+const CHAT_SAMPLE = `### 4~5등급 발문
+T: 문제에서 우리가 구해야 하는 게 뭘까요?
+S: $f(2)+g(2)$의 값이요!
+T: 맞아요. 먼저 $f(x)=2x$에서 $x$ 자리에 $2$를 넣으면요?
+S: $f(2)=2×2=4$예요.
+T: 좋아요! 이번엔 $g(x)=x^3+x^2$에 $x=2$를 넣어 볼까요?
+S: $2^3+2^2=8+4=12$요.
+T: 계산 정확해요! 이제 두 값을 더하면요?
+S: $4+12=16$이요.
+T: 정답은 $16$! 잘했어요 👏
+! 자주 틀리는 포인트: $2^3$을 $2×3=6$으로 계산한다.
+! 자주 틀리는 포인트: $g(2)$에서 $x^2$항을 빼먹고 $8$만 쓴다.
+* 핵심 포인트: 함수값은 $x$ 자리에 숫자를 그대로 넣는다.
+* 핵심 포인트: 대입 → 계산 → 더하기, 순서를 나눠서 푼다.
+
+### 2~3등급 발문
+T: $f(2)+g(2)$를 구하려면 어떤 정보가 필요하죠?
+S: $f$와 $g$의 식이요. 문제에 이미 주어졌어요.
+T: $g(x)=x^3+x^2$는 묶어 보면 계산이 더 편해질까요?
+S: $x^2(x+1)$로 묶으면 $x=2$에서 $4×3=12$가 돼요.
+T: 좋아요. $f(2)$는요?
+S: 일차식이라 바로 $4$예요.
+T: 합을 구하고, 맞는지 확인하는 방법도 말해 볼래요?
+S: $4+12=16$이고, 그래프에서 $x=2$일 때 높이를 읽어도 같아요.
+T: 훌륭해요. 정답은 $16$입니다.
+! 자주 틀리는 포인트: 묶을 때 $x^2(x+1)$을 $x^2(x+2)$처럼 잘못 묶는다.
+! 자주 틀리는 포인트: 그래프로 확인할 때 두 함수의 높이를 서로 바꿔 읽는다.
+* 핵심 포인트: 식을 묶으면 대입 계산이 짧아진다.
+* 핵심 포인트: 대입한 결과는 그래프로 한 번 더 확인한다.
+
+### 1등급 30초컷
+T: 30초 안에 끝내는 순서, 말해 볼까요?
+S: $g(2)=x^2(x+1)$에 넣어서 $4×3=12$, $f(2)=4$예요.
+T: 합은요?
+S: $16$이요.
+T: 검산은 어떻게 하죠?
+S: 그래프에서 $x=2$의 두 높이를 더해 보면 돼요.
+T: 정답 $16$, 끝!
+! 자주 틀리는 포인트: 빠르게 하려다 $g(2)$의 $x^2$항을 빼먹는다.
+* 핵심 포인트: 묶기 → 대입 → 합, 세 걸음이면 끝난다.
+* 핵심 포인트: 시간이 남으면 그래프로 검산한다.`;
+
+/* 풀이 글마다 대화 풀이를 따로 보관한다 (최근 12개) */
+const chatKey = t => { t = (t || '').trim(); return t.length + ':' + t.slice(0, 160); };
+function chatLoad(t) { try { return (JSON.parse(localStorage.getItem('chatStore') || '{}')[chatKey(t)]) || ''; } catch (e) { return ''; } }
+function chatSave(t, chat) {
+  try {
+    const st = JSON.parse(localStorage.getItem('chatStore') || '{}'); st[chatKey(t)] = chat;
+    const ks = Object.keys(st); while (ks.length > 12) delete st[ks.shift()];
+    localStorage.setItem('chatStore', JSON.stringify(st));
+  } catch (e) {}
+}
+
+function chatParse(text) {
+  const levels = []; let cur = null;
+  for (const raw of (text || '').replace(/\r\n?/g, '\n').split('\n')) {
+    const line = raw.trim(); if (!line || /^```/.test(line)) continue;
+    let m = line.match(/^#{2,3}\s*(.+)$/);
+    if (m) { cur = { title: m[1].trim(), msgs: [], mistakes: [], keys: [] }; levels.push(cur); continue; }
+    if (!cur) { cur = { title: '대화 풀이', msgs: [], mistakes: [], keys: [] }; levels.push(cur); }
+    if ((m = line.match(/^(?:T|선생님|교사|Q)\s*[:：]\s*(.+)$/i))) cur.msgs.push({ who: 't', text: m[1] });
+    else if ((m = line.match(/^(?:S|학생|A)\s*[:：]\s*(.+)$/i))) cur.msgs.push({ who: 's', text: m[1] });
+    else if ((m = line.match(/^(?:!|❗|⚠️?|※)\s*(?:자주 틀리는 포인트\s*[:：]?)?\s*(.+)$/))) cur.mistakes.push(m[1]);
+    else if ((m = line.match(/^(?:\*|★|⭐)\s+(?:핵심 포인트\s*[:：]?)?\s*(.+)$/))) cur.keys.push(m[1]);
+    else if (cur.msgs.length) cur.msgs[cur.msgs.length - 1].text += ' ' + line;     // 줄이 이어진 말풍선
   }
-  if (buf) out.push(buf.join('\n'));
-  return out;
+  return levels.filter(l => l.msgs.length);
 }
-function hwUnits(sol) {
-  const r = parseAny(sol.text), u = [];
-  if (r.intro) blocksOf(r.intro).forEach(b => u.push({ html: render(b), step: 0 }));
-  let last = 0;
-  r.steps.forEach(s => {
-    last = s.n;
-    u.push({ html: '<span class="hwn">' + s.n + '단계</span>', step: s.n });
-    blocksOf(s.body).forEach(b => u.push({ html: render(b), step: s.n }));
-  });
-  if (r.answer !== null) u.push({ html: '<span class="hwn">정답</span> ' + render(r.answer).replace(/<\/?p>/g, ''), step: last, cls: 'ans' });
-  return u;
+function chatTab(title) {
+  if (/4\s*[~\-–]\s*5/.test(title)) return '🌱 ' + title;
+  if (/2\s*[~\-–]\s*3/.test(title)) return '🌿 ' + title;
+  if (/1\s*등급/.test(title)) return '⚡ ' + title;
+  return '💬 ' + title;
 }
-function hwShell(sol) {
-  const hasFig = !sol.spec.empty || !!capURL;
-  return '<div class="hw' + (hasFig ? '' : ' nofig') + '">' +
-    (hasFig ? '<div><div class="tabs" id="hwFigTabs" style="margin-top:0"></div><div class="hwfig" id="hwFig"></div><div class="gnote" id="hwFigNote"></div></div>' : '') +
-    '<div class="hwpaper" id="hwPaper"></div></div>' +
-    '<div class="bar"><button id="hwPlay" class="primary">▶ 재생</button><button id="hwNext">다음 줄</button><button id="hwAll">완성본</button><button id="hwReset">처음부터</button>' +
-    '<label style="font-size:14px;color:var(--muted)">속도 <select id="hwSpeed"><option value="0.5">느리게</option><option value="1">보통</option><option value="2">빠르게</option></select></label></div>';
-}
-function hwBtn() { const b = $('hwPlay'); if (b) b.textContent = hw.playing ? '⏸ 일시정지' : '▶ 재생'; }
-function hwSetP(u) {
-  const pen = $('hwPen');
-  if (u.p >= 1) {
-    u.el.style.webkitMaskImage = u.el.style.maskImage = 'none';
-    if (pen) pen.style.display = 'none';
-    return;
+
+const kc = { levels: [], lv: 0, i: 0, rec: false, playing: false, speed: 1, token: 0, els: [], recEl: null };
+let chatCtx = null;                                   // { host, solText, problemText, sp }
+const ksleep = (ms, tok) => new Promise(r => setTimeout(() => r(tok === kc.token), ms));
+const inlineMath = t => render(t).replace(/<\/?p>/g, '');
+const kTime = idx => { const d = new Date(kc.base + Math.floor(idx / 2) * 60000); const h = d.getHours(); return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+function chatMount(host, solText, sp, problemText) {
+  kc.token++; kc.playing = false;
+  chatCtx = { host, solText, sp, problemText: problemText || '' };
+  kc.levels = chatParse(chatLoad(solText)); kc.lv = 0;
+  const has = kc.levels.length > 0;
+  const hasFig = (sp && !sp.empty) || !!capURL;
+  let h = '<div class="hw' + (hasFig ? '' : ' nofig') + '">';
+  if (hasFig) h += '<div><div class="tabs" id="chFigTabs" style="margin-top:0"></div><div class="hwfig" id="chFig"></div><div class="animbar" id="chBar"></div><div class="gnote" id="chFigNote"></div></div>';
+  h += '<div>';
+  if (has) {
+    h += '<div class="kphone"><div class="ktabs">' + kc.levels.map((l, i) => '<button data-lv="' + i + '">' + esc(chatTab(l.title)) + '</button>').join('') + '</div>' +
+         '<div class="kchat" id="kChat"></div>' +
+         '<div class="kctl"><button id="kPlay" class="primary">▶ 재생</button><button id="kNext">다음</button><button id="kAll">전체</button><button id="kReset">↺</button>' +
+         '<select id="kSpeed"><option value="0.6">느리게</option><option value="1" selected>보통</option><option value="2">빠르게</option></select></div></div>';
   }
-  const e = (u.p * 100).toFixed(1), g = 'linear-gradient(90deg,#000 ' + e + '%,transparent ' + Math.min(100, +e + 4) + '%)';
-  u.el.style.webkitMaskImage = u.el.style.maskImage = g;
-  if (pen) {
-    pen.style.display = 'block';
-    pen.style.left = (u.el.offsetLeft + u.el.offsetWidth * u.p) + 'px';
-    pen.style.top = (u.el.offsetTop + u.el.offsetHeight * 0.75) + 'px';
+  h += '<details class="altbox ksetup"' + (has ? '' : ' open') + '><summary>' + (has ? '대화 풀이 다시 만들기·붙여넣기' : '💬 등급별 대화 풀이 만들기') + '</summary>' +
+       '<p>선생님과 학생이 카톡으로 대화하듯 풀이를 보여 줍니다. AI가 만들어야 하니 아래 중 한 가지를 쓰세요.<br>① <b>프롬프트 복사</b> → Gemini에 붙여넣기 → 받은 답을 아래 칸에 붙여넣고 <b>적용</b><br>② AI 키(또는 서버)가 연결돼 있으면 <b>✨ AI로 바로 만들기</b></p>' +
+       '<div class="row2"><button id="kCopyPrompt">프롬프트 복사</button><button id="kAI" class="primary">✨ AI로 바로 만들기</button><button id="kSample" class="linkbtn">예시 넣기</button></div>' +
+       '<textarea id="kIn" placeholder="### 4~5등급 발문 … 형식의 답을 붙여넣으세요"></textarea><button id="kApply">적용</button></details></div></div>';
+  host.innerHTML = h;
+  chatWire();
+  if (hasFig) chatFigure();
+  if (has) kBuild(0, true);
+}
+
+function chatBodyText() { return (chatCtx.problemText ? chatCtx.problemText + '\n\n' : '') + chatCtx.solText; }
+function chatWire() {
+  const R = id => $(id);
+  const remount = () => chatMount(chatCtx.host, chatCtx.solText, chatCtx.sp, chatCtx.problemText);
+  R('kCopyPrompt').onclick = async () => {
+    try { await navigator.clipboard.writeText(chatPrompt(chatBodyText())); toast('프롬프트를 복사했어요. Gemini에 붙여넣으세요.', 3000); }
+    catch (e) { toast('복사 권한이 없어요. 프롬프트는 다른 풀이 화면에서도 복사할 수 있어요.', 4000, true); }
+  };
+  R('kSample').onclick = () => { chatSave(chatCtx.solText, CHAT_SAMPLE); remount(); };
+  R('kApply').onclick = () => {
+    const t = R('kIn').value.trim();
+    if (!chatParse(t).length) { toast('“T:” “S:” 대화 줄을 찾지 못했어요. 형식을 확인해 주세요.', 5000, true); return; }
+    chatSave(chatCtx.solText, t); remount();
+  };
+  R('kAI').onclick = async () => {
+    try {
+      toast('AI가 등급별 대화를 만드는 중… (20~60초)', 0);
+      const out = await aiAsk(chatPrompt(chatBodyText()), null);
+      if (!chatParse(out).length) throw new Error('AI가 대화 형식으로 답하지 않았어요. 다시 시도해 주세요.');
+      chatSave(chatCtx.solText, out); remount(); toast('완료!', 2500);
+    } catch (e) {
+      if (e.noKey) { openAiDlg('대화 풀이를 만들려면 AI 키가 필요해요.'); toast('AI 키를 먼저 저장해 주세요.', 3000, true); }
+      else toast(e.message, 7000, true);
+    }
+  };
+  if (!kc.levels.length) return;
+  chatCtx.host.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => kBuild(+b.dataset.lv, true));
+  R('kPlay').onclick = () => kc.playing ? kPause() : kPlay();
+  R('kNext').onclick = kNext; R('kAll').onclick = kAll; R('kReset').onclick = () => kBuild(kc.lv, false);
+  R('kSpeed').onchange = e => { kc.speed = +e.target.value; };
+}
+
+async function chatFigure() {
+  const el = $('chFig'), sp = chatCtx.sp, tabs = $('chFigTabs'); if (!el) return;
+  const both = sp && !sp.empty && capURL;
+  let mode = sp && !sp.empty ? 'graph' : 'img';
+  const draw = async () => {
+    if (tabs) { tabs.innerHTML = both ? '<button data-m="graph">재현 도형</button><button data-m="img">원본 이미지</button>' : ''; tabs.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.m === mode); b.onclick = () => { mode = b.dataset.m; draw(); }; }); }
+    if (mode === 'img') { el.innerHTML = '<img alt="문제 도형" src="' + capURL + '">'; $('chBar').innerHTML = ''; return; }
+    try { const ctl = await drawJSX(el, sp); if (ctl && ctl.hasAnim) animBar(ctl, $('chBar')); }
+    catch (e) { const n = $('chFigNote'); if (n) { n.textContent = '도형 표시 실패: ' + e.message; n.classList.add('bad'); } }
+  };
+  draw();
+}
+
+/* 대화 판 만들기 */
+function kBuild(lv, autoplay) {
+  kc.token++; kc.playing = false; kc.lv = lv; kc.i = 0; kc.rec = false; kc.base = Date.now();
+  const L = kc.levels[lv], box = $('kChat');
+  chatCtx.host.querySelectorAll('[data-lv]').forEach(b => b.classList.toggle('on', +b.dataset.lv === lv));
+  box.innerHTML = '<div class="kdate">' + new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) + '</div>';
+  kc.els = L.msgs.map((m, idx) => {
+    const row = document.createElement('div'); row.className = 'kmsg ' + m.who; row.style.display = 'none';
+    const bub = '<div class="kb"><span class="kv">ıl</span>' + inlineMath(m.text) + '</div>';
+    row.innerHTML = m.who === 't'
+      ? '<div class="kava">🧑‍🏫</div><div class="kcol"><div class="kname">선생님</div><div class="kbrow">' + bub + '<span class="ktime">' + kTime(idx) + '</span></div></div>'
+      : '<div class="kbrow"><span class="ktime">' + kTime(idx) + '</span>' + bub + '</div>';
+    box.appendChild(row); return row;
+  });
+  const rec = document.createElement('div'); rec.className = 'krecwrap'; rec.style.display = 'none';
+  rec.innerHTML = (L.mistakes.length ? '<div class="krec warn"><b>⚠️ 학생들이 자주 틀리는 포인트</b><ul>' + L.mistakes.map(x => '<li>' + inlineMath(x) + '</li>').join('') + '</ul></div>' : '') +
+                  (L.keys.length ? '<div class="krec key"><b>⭐ 핵심 포인트 다시 보기</b><ul>' + L.keys.map(x => '<li>' + inlineMath(x) + '</li>').join('') + '</ul></div>' : '');
+  box.appendChild(rec); kc.recEl = rec;
+  kBtn();
+  if (autoplay) setTimeout(() => { if (!kc.playing && kc.i === 0) kPlay(); }, 400);
+}
+function kBtn() { const b = $('kPlay'); if (b) b.textContent = kc.playing ? '⏸ 멈춤' : (kc.i >= kc.els.length && kc.rec ? '↻ 다시' : '▶ 재생'); }
+function kScroll() { const b = $('kChat'); if (b) b.scrollTop = b.scrollHeight; }
+function kShow(i) { const r = kc.els[i]; r.style.display = 'flex'; r.classList.add('pop'); kScroll(); }
+function kShowRec() { kc.rec = true; kc.recEl.style.display = 'block'; kc.recEl.classList.add('pop'); kScroll(); }
+async function kPlay() {
+  if (kc.playing) return;
+  if (kc.i >= kc.els.length && kc.rec) { kBuild(kc.lv, false); }
+  kc.playing = true; kc.token++; const tok = kc.token; kBtn();
+  while (kc.playing && tok === kc.token && kc.i < kc.els.length) {
+    const m = kc.levels[kc.lv].msgs[kc.i], row = kc.els[kc.i];
+    let typing = null;
+    if (m.who === 't') {                              // 선생님 말풍선은 "입력 중…" 표시 후에 나온다
+      typing = document.createElement('div'); typing.className = 'kmsg t typing pop';
+      typing.innerHTML = '<div class="kava">🧑‍🏫</div><div class="kcol"><div class="kname">선생님</div><div class="kb"><i></i><i></i><i></i></div></div>';
+      row.before(typing); kScroll();
+      if (!await ksleep(750 / kc.speed, tok)) { typing.remove(); return; }
+      typing.remove();
+    } else if (!await ksleep(450 / kc.speed, tok)) return;
+    kShow(kc.i); kc.i++;
+    if (!await ksleep(Math.min(2400, 700 + m.text.length * 28) / kc.speed, tok)) return;
   }
+  if (tok === kc.token && kc.playing) { if (kc.i >= kc.els.length && !kc.rec) kShowRec(); kc.playing = false; kBtn(); }
 }
-function hwShowStep(k) {
-  hw.curStep = k;
-  if (hw.mode !== 'rebuilt' || k === hw.figStep) return;
-  hw.figStep = k;
-  hw.figP = hw.figP.then(() => drawJSX($('hwFig'), specAt(hw.sp, k), { autoplayStep: k }))
-    .catch(e => { const n = $('hwFigNote'); if (n) { n.textContent = '도형 표시 실패: ' + e.message; n.classList.add('bad'); } });
+function kPause() { kc.playing = false; kc.token++; chatCtx && chatCtx.host.querySelectorAll('.typing').forEach(e => e.remove()); kBtn(); }
+function kNext() {
+  kPause();
+  if (kc.i < kc.els.length) { kShow(kc.i); kc.i++; if (kc.i >= kc.els.length) kShowRec(); }
+  else if (!kc.rec) kShowRec();
+  kBtn();
 }
-function hwFigure() {
-  const tabs = $('hwFigTabs'); if (!tabs) return;
-  const both = !hw.sp.empty && capURL;
-  tabs.innerHTML = both ? '<button data-fm="rebuilt">재현 도형</button><button data-fm="img">원본 이미지</button>' : '';
-  tabs.querySelectorAll('button').forEach(b => {
-    b.classList.toggle('on', b.dataset.fm === hw.mode);
-    b.onclick = () => { hw.mode = b.dataset.fm; hwFigure(); };
-  });
-  if (hw.mode === 'img') $('hwFig').innerHTML = '<img alt="원본 도형" src="' + capURL + '">';
-  else if (hw.mode === 'rebuilt') { hw.figStep = -1; hwShowStep(hw.curStep); }
-}
-function hwInit(sol) {
-  hw.token++; hw.playing = false; hw.i = 0; hw.sp = sol.spec; hw.curStep = 0; hw.figStep = -1;
-  hw.mode = !sol.spec.empty ? 'rebuilt' : (capURL ? 'img' : '');
-  const paper = $('hwPaper');
-  paper.innerHTML = '<span class="pen" id="hwPen">✏️</span>';
-  hw.units = hwUnits(sol).map(u => {
-    const el = document.createElement('div');
-    el.className = 'hwline' + (u.cls ? ' ' + u.cls : ''); el.innerHTML = u.html;
-    el.style.visibility = 'hidden';
-    el.style.transform = 'rotate(' + ((Math.random() - 0.5) * 0.9).toFixed(2) + 'deg)';
-    paper.appendChild(el);
-    const c = el.cloneNode(true); c.querySelectorAll('.katex-mathml').forEach(x => x.remove());
-    return Object.assign({}, u, { el, p: 0, chars: c.textContent.length });
-  });
-  $('hwSpeed').value = String(hw.speed);
-  $('hwSpeed').onchange = e => { hw.speed = +e.target.value; };
-  $('hwPlay').onclick = () => hw.playing ? hwPause() : hwPlay();
-  $('hwNext').onclick = hwNext; $('hwAll').onclick = hwAll; $('hwReset').onclick = hwReset;
-  hwFigure(); hwBtn();
-}
-function hwPlay() {
-  if (hw.playing) return;
-  if (hw.i >= hw.units.length) hwReset();
-  hw.playing = true; hw.token++; hwBtn(); hwLoop(hw.token);
-}
-function hwPause() { hw.playing = false; hw.token++; hwBtn(); }
-async function hwLoop(tok) {
-  while (hw.playing && tok === hw.token && hw.i < hw.units.length) {
-    const u = hw.units[hw.i];
-    hwShowStep(u.step);
-    if (!await hwReveal(u, tok)) return;
-    hw.i++;
-    if (!await sleep(280 / hw.speed, tok)) return;
-  }
-  if (tok === hw.token) { hw.playing = false; hwBtn(); const pen = $('hwPen'); if (pen) pen.style.display = 'none'; }
-}
-function hwReveal(u, tok) {
-  return new Promise(res => {
-    u.el.style.visibility = 'visible';
-    const dur = Math.max(450, u.chars * 60), t0 = performance.now(); let last = t0;
-    const tick = now => {
-      if (tok !== hw.token) { res(false); return; }
-      u.p = Math.min(1, u.p + (now - last) * hw.speed / dur); last = now; hwSetP(u);
-      if (u.p >= 1) res(true); else requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
-}
-function hwNext() {
-  hwPause(); const u = hw.units[hw.i]; if (!u) return;
-  hwShowStep(u.step); u.el.style.visibility = 'visible'; u.p = 1; hwSetP(u); hw.i++;
-}
-function hwAll() {
-  hwPause();
-  hw.units.forEach(u => { u.el.style.visibility = 'visible'; u.p = 1; hwSetP(u); });
-  hw.i = hw.units.length;
-  const last = hw.units.length ? hw.units[hw.units.length - 1].step : 0; hwShowStep(last);
-}
-function hwReset() {
-  hwPause();
-  hw.units.forEach(u => { u.el.style.visibility = 'hidden'; u.p = 0; });
-  hw.i = 0; const pen = $('hwPen'); if (pen) pen.style.display = 'none';
-  hwShowStep(0);
-}
+function kAll() { kPause(); while (kc.i < kc.els.length) { kShow(kc.i); kc.i++; } kShowRec(); kBtn(); }
 
 /* ---------- 진단 ---------- */
 const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
@@ -1460,35 +1483,16 @@ const DIAG_CHECKS = [
     const n = await new Promise(r => { let k = 0; const t0 = performance.now(); const f = now => { k++; if (now - t0 > 600) r(k); else requestAnimationFrame(f); }; requestAnimationFrame(f); setTimeout(() => r(k), 1500); });
     return { ok: n > 5, info: '600ms 동안 ' + n + '프레임' + (n <= 5 ? ' — 애니메이션이 멈춰 있습니다(화면이 뒤에 있거나 절전 모드일 수 있음)' : '') };
   }],
-  ['마스크 효과(글자 써지는 효과)', async () => {
-    const ok = CSS.supports('mask-image', 'linear-gradient(#000,transparent)') || CSS.supports('-webkit-mask-image', 'linear-gradient(#000,transparent)');
-    return { ok, info: ok ? '지원' : '미지원: 글자가 한 번에 나올 수 있음' };
-  }],
   ['손글씨 글꼴', async () => {
-    const faces = await withTimeout(document.fonts.load('20px "Nanum Pen Script"', '가'), 10000, '10초 안에 글꼴을 못 불러옴');
+    const faces = await withTimeout(document.fonts.load('20px "Gaegu"', '가'), 10000, '10초 안에 글꼴을 못 불러옴');
     const ok = faces.length > 0;
-    return { ok, info: ok ? '나눔 펜 스크립트 로드됨' : '글꼴을 못 불러옴(기본 글꼴로 표시)' };
+    return { ok, info: ok ? 'Gaegu(대화 글꼴) 로드됨' : '글꼴을 못 불러옴(기본 글꼴로 표시)' };
   }],
   ['KaTeX(수식)', async () => ({ ok: typeof katex !== 'undefined', info: typeof katex !== 'undefined' ? '로드됨' : '못 불러옴' })],
   ['JSXGraph 로드', async () => {
     loadCss('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraph.css');
     await withTimeout(loadScript('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraphcore.js'), 15000, '15초 안에 못 불러옴');
     return { ok: typeof JXG !== 'undefined', info: '로드됨' };
-  }],
-  ['Desmos 로드', async () => {
-    await withTimeout(loadScript('https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6'), 15000, '15초 안에 못 불러옴');
-    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-9999px;width:300px;height:200px'; document.body.appendChild(d);
-    try { Desmos.GraphingCalculator(d, { expressions: false }); } finally { d.remove(); }
-    return { ok: true, info: '계산기 생성됨' };
-  }],
-  ['GeoGebra 로드', async () => {
-    await withTimeout(loadScript('https://www.geogebra.org/apps/deployggb.js'), 15000, '15초 안에 못 불러옴');
-    const d = document.createElement('div'); d.id = 'ggbdiag'; d.style.cssText = 'position:fixed;left:-9999px;top:0;width:300px;height:200px'; document.body.appendChild(d);
-    const t0 = performance.now();
-    try {
-      await withTimeout(new Promise(res => new GGBApplet({ appName: 'classic', perspective: 'G', width: 300, height: 200, appletOnLoad: res }, true).inject('ggbdiag')), 25000, '25초 안에 GeoGebra가 응답하지 않음');
-    } finally { d.remove(); }
-    return { ok: true, info: '앱 생성됨 (' + Math.round(performance.now() - t0) + 'ms)' };
   }],
 ];
 async function runDiag() {
@@ -1620,6 +1624,7 @@ function applyJobResult(data, imgURL) {
   src.value = (problem ? problem + '\n\n' : '') + sol;
   $('altProblem').value = problem; $('altSrc').value = alt; altIdx = 0;
   capURL = imgURL; updateAltPrompt();
+  if ((data.chat || '').trim()) chatSave(src.value, data.chat.trim());
   jobSet('job_img', ''); jobSet('job_txt', ''); jobRender();
   setView('edit'); update(); window.scrollTo(0, 0);
   toast('정리 완료!' + (alt ? ' 다른 풀이(그래프·도형)도 만들었어요.' : ''), 5000);
@@ -1733,14 +1738,14 @@ function setHomeMode(m) {
   homeMode = m;
   $('out').style.display = m === 'text' ? '' : 'none';
   $('homeHand').style.display = m === 'hand' ? 'block' : 'none';
-  $('toHand').textContent = m === 'hand' ? '📄 수식으로 보기' : '✍ 손글씨로 보기';
+  $('toHand').textContent = m === 'hand' ? '📄 수식으로 보기' : '✍ 손글씨 풀이';
   if (m === 'hand') {
     $('altOut').innerHTML = '';                       // 같은 이름의 요소가 겹치지 않도록 다른 풀이 화면의 손글씨 판을 비운다
-    const sol = { title: '풀이', text: src.value, spec: parseSpecSteps([]) };
-    $('homeHand').innerHTML = hwShell(sol); hwInit(sol);
-  } else { hwPause(); $('homeHand').innerHTML = ''; }
+        chatMount($('homeHand'), src.value, null, '');
+  } else { if (chatCtx) kPause(); $('homeHand').innerHTML = ''; }
 }
 function setView(v) {
+  if (chatCtx) kPause();
   if (v !== 'edit' && homeMode === 'hand') setHomeMode('text');
   document.body.classList.toggle('student', v === 'student');
   document.body.classList.toggle('alt', v === 'alt');
@@ -1786,7 +1791,7 @@ $('mStu').onclick = () => setMode(true);
 $('mAlt').onclick = () => setView('alt');
 $('altProblem').addEventListener('input', updateAltPrompt);
 $('altSrc').addEventListener('input', () => { altIdx = 0; renderAlt(); });
-$('altSample').onclick = () => { $('altSrc').value = ALT_SAMPLE; altIdx = 0; renderAlt(); };
+$('altSample').onclick = () => { $('altSrc').value = ALT_SAMPLE; altIdx = 0; parseSolutions(ALT_SAMPLE).forEach(q => chatSave(q.text, CHAT_SAMPLE)); renderAlt(); };
 $('altClear').onclick = () => { $('altSrc').value = ''; renderAlt(); };
 $('altPaste').onclick = async () => {
   try { $('altSrc').value = await navigator.clipboard.readText(); altIdx = 0; renderAlt(); }
@@ -1801,7 +1806,7 @@ const RAW_SAMPLE = `조건 (가)에서는 x가 무한대로 갈 때, 분자의 �
 조건 (나)를 통해 f(x)와 g(x)의 최저차항과 계수들을 확인해서, 최종적으로 f(x) = 2x와 g(x) = x^3 + x^2을 구했어요.
 
 그래서 f(2) = 4, g(2) = 12가 되어, 합계는 16이 됩니다. 극한은 lim_(x->∞) (2x)/(x^3) = 0 이고 x² ≥ 0 입니다.`;
-$('sample').onclick = () => { src.value = RAW_SAMPLE; setView('edit'); update(); };
+$('sample').onclick = () => { src.value = RAW_SAMPLE; chatSave(RAW_SAMPLE, CHAT_SAMPLE); setView('edit'); update(); };
 $('sample2').onclick = $('sample').onclick;
 $('clear').onclick = () => { src.value = ''; setView('edit'); update(); };
 $('paste').onclick = doPaste;
