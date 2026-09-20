@@ -219,8 +219,9 @@
     </div>
   </details>
   <section id="resultSec">
-    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
+    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toHand">✍ 손글씨로 보기</button><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
     <div id="out" class="math-text"></div>
+    <div id="homeHand" style="display:none"></div>
   </section>
   <details id="srcBox" class="altbox">
     <summary>원문 보기·수정</summary>
@@ -322,7 +323,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v7 · 2026-09-20 JSXGraph 애니메이션';
+const APP_VERSION = 'v8 · 2026-09-20 홈에서 손글씨 풀이';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1726,7 +1727,21 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 }
 
 /* ---------- 모드 · 이벤트 ---------- */
+/* 홈 결과를 손글씨 풀이로 보기 (수식 보기와 전환) */
+let homeMode = 'text';
+function setHomeMode(m) {
+  homeMode = m;
+  $('out').style.display = m === 'text' ? '' : 'none';
+  $('homeHand').style.display = m === 'hand' ? 'block' : 'none';
+  $('toHand').textContent = m === 'hand' ? '📄 수식으로 보기' : '✍ 손글씨로 보기';
+  if (m === 'hand') {
+    $('altOut').innerHTML = '';                       // 같은 이름의 요소가 겹치지 않도록 다른 풀이 화면의 손글씨 판을 비운다
+    const sol = { title: '풀이', text: src.value, spec: parseSpecSteps([]) };
+    $('homeHand').innerHTML = hwShell(sol); hwInit(sol);
+  } else { hwPause(); $('homeHand').innerHTML = ''; }
+}
 function setView(v) {
+  if (v !== 'edit' && homeMode === 'hand') setHomeMode('text');
   document.body.classList.toggle('student', v === 'student');
   document.body.classList.toggle('alt', v === 'alt');
   $('mEdit').classList.toggle('on', v === 'edit');
@@ -1739,6 +1754,7 @@ function setView(v) {
 function setMode(student) { setView(student ? 'student' : 'edit'); }
 function update() {
   document.body.classList.toggle('nosrc', !src.value.trim());
+  if (homeMode === 'hand') setHomeMode('text');       // 내용이 바뀌면 손글씨 판은 닫고 수식 보기로 돌아간다
   out.innerHTML = render(src.value);
   $('toAlt').style.display = $('altSrc').value.trim() ? '' : 'none';
   try { localStorage.setItem('src', src.value); } catch (e) {}
@@ -1797,6 +1813,7 @@ $('aiFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; 
 $('typeBtn').onclick = openSrc;
 $('toStu').onclick = () => setMode(true);
 $('toAlt').onclick = () => setView('alt');
+$('toHand').onclick = () => setHomeMode(homeMode === 'hand' ? 'text' : 'hand');
 $('jobRun').onclick = jobRun;
 $('jobClear').onclick = () => { jobSet('job_img', ''); jobSet('job_txt', ''); jobRender(); toast('비웠어요.', 2000); };
 $('jobTxt').addEventListener('input', () => jobSet('job_txt', $('jobTxt').value));
