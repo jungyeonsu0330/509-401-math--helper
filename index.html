@@ -77,6 +77,31 @@
   .chip { padding:3px 10px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
   .chip i { display:inline-block; width:10px; height:10px; border-radius:5px; margin-right:6px; }
 
+  /* 단순화한 홈 화면 */
+  header { position:sticky; }
+  button.big { font-size:17px; padding:10px 20px; font-weight:600; }
+  #menu { position:absolute; right:12px; top:calc(100% + 6px); background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.22); padding:8px; flex-direction:column; gap:6px; min-width:260px; z-index:30; }
+  #menu button { text-align:left; border:0; background:transparent; padding:10px 12px; }
+  #menu button.on { background:var(--soft); font-weight:700; }
+  #menu label { padding:8px 12px; font-size:14px; color:var(--muted); display:flex; gap:10px; align-items:center; }
+  #menu hr { border:0; border-top:1px solid var(--line); width:100%; margin:2px 0; }
+  main.one { grid-template-columns:1fr; max-width:900px; }
+  main.one section { min-height:0; }
+  .hero { text-align:center; padding:48px 12px 40px; }
+  .hero .heroico { font-size:54px; }
+  section .hero h2 { font-size:21px; color:var(--text); margin:10px 0 6px; }
+  .hero p { color:var(--muted); margin:0 0 22px; }
+  .hero p.sub { margin:18px 0 0; }
+  .linkbtn { border:0; background:transparent; color:var(--accent); text-decoration:underline; padding:4px; }
+  .rhead { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .rhead h2 { margin:0; }
+  body.empty #resultSec { display:none; }
+  body:not(.empty) #hero { display:none; }
+  body.empty #srcBox:not([open]) { display:none; }
+  #srcBox { margin:0; }
+  #srcBox textarea { height:auto; min-height:180px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; }
+  .promptbox { display:none !important; }
+
   #diag { position:fixed; left:0; right:0; bottom:0; max-height:75vh; background:var(--card); border-top:2px solid var(--accent); z-index:20; box-shadow:0 -6px 24px rgba(0,0,0,.25); display:flex; flex-direction:column; }
   #diag[style*="none"] { display:none !important; }
   .diaghead { display:flex; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
@@ -115,32 +140,41 @@
 </head>
 <body>
 <header>
-  <h1>Gemini 수식 변환기</h1>
-  <div class="seg">
-    <button id="mEdit" class="on">편집</button>
-    <button id="mStu">학생용 보기</button>
-    <button id="mAlt">다른 풀이</button>
+  <h1>수식 변환기</h1>
+  <button id="paste" class="primary big">📋 붙여넣기</button>
+  <button id="menuBtn">⋯ 메뉴</button>
+  <div id="menu" style="display:none">
+    <button id="mEdit" class="on">🏠 홈 (변환 결과)</button>
+    <button id="mStu">🎓 학생용 보기</button>
+    <button id="mAlt">📐 다른 풀이 (그래프·도형)</button>
+    <hr>
+    <button id="copyPrompt2">Gemini용 형식 프롬프트 복사</button>
+    <button id="sample">예시 보기</button>
+    <button id="clear">지우기</button>
+    <label>글자 크기 <input id="size" type="range" min="14" max="34" value="22"></label>
+    <button id="diagBtn">진단</button>
   </div>
-  <label style="font-size:13px;color:var(--muted)">글자
-    <input id="size" type="range" min="14" max="34" value="20">
-  </label>
-  <button id="diagBtn">진단</button>
-  <button id="paste">붙여넣기</button>
-  <button id="sample">예시</button>
-  <button id="clear">지우기</button>
 </header>
 
-<main>
-  <section>
-    <h2>Gemini 답변 (원문)</h2>
-    <textarea id="src" placeholder="여기에 Gemini 답변을 붙여넣으세요. $f(x)$ 같은 표기가 수식으로 바뀝니다."></textarea>
+<main class="one">
+  <section id="hero">
+    <div class="hero">
+      <div class="heroico">📋</div>
+      <h2>Gemini 답변을 복사한 뒤, 붙여넣기만 하세요</h2>
+      <p>$ 기호가 있든 없든 수식은 자동으로 예쁘게 바뀝니다.</p>
+      <button id="paste2" class="primary big">📋 붙여넣기</button>
+      <p class="sub"><button id="typeBtn" class="linkbtn">직접 입력하기</button> · <button id="sample2" class="linkbtn">예시로 해보기</button></p>
+    </div>
   </section>
-  <section>
-    <h2>변환 결과</h2>
+  <section id="resultSec">
+    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
     <div id="out" class="math-text"></div>
   </section>
+  <details id="srcBox" class="altbox">
+    <summary>원문 보기·수정</summary>
+    <textarea id="src" placeholder="여기에 Gemini 답변을 붙여넣으세요."></textarea>
+  </details>
 </main>
-<div class="hint">지원 표기: <code>$...$</code>, <code>$$...$$</code>, <code>\( ... \)</code>, <code>\[ ... \]</code>, <code>**굵게**</code> · 단계는 <code>1.</code> <code>1단계</code> <code>Step 1</code> <code>①</code> 로 시작하는 줄로 나뉩니다.</div>
 
 <div class="promptbox">
   <details>
@@ -202,13 +236,14 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v3 · 2026-09-20 진단 추가';
+const APP_VERSION = 'v4 · 2026-09-20 간단한 홈 + 자동 수식 변환';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
   ERRS.push(new Date().toLocaleTimeString() + ' [' + kind + '] ' + msg);
   const b = document.getElementById('diagBtn');
   if (b) { b.textContent = '진단 (오류 ' + ERRS.length + ')'; b.style.color = '#d33'; }
+  const mb = document.getElementById('menuBtn'); if (mb) mb.textContent = '⋯ 메뉴 ●';
 }
 addEventListener('error', e => noteErr('오류', (e.message || '') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')));
 addEventListener('unhandledrejection', e => noteErr('약속 실패', (e.reason && e.reason.message) || String(e.reason)));
@@ -246,7 +281,99 @@ const MATH_RE = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|\$((?:
 function plain(text) {
   return esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
+/* ---------- $ 기호가 없는 수식도 자동으로 수식 처리 ---------- */
+const MFUNC = /^(?:sin|cos|tan|cot|sec|csc|log|ln|exp|lim|sqrt|abs|max|min)$/;
+const T_SRC = '(?:√(?:\\([^()가-힣\\n]*\\)|[A-Za-z0-9.]+)|[A-Za-z]{1,3}\\([^()가-힣\\n]*\\)|[A-Za-z0-9.]+|\\([^()가-힣\\n]*\\)|[π∞])' +
+              '(?:[\\^_](?:\\{[^{}]*\\}|\\([^()가-힣\\n]*\\)|-?[A-Za-z0-9.]+)|[²³⁴°\'])*';
+const OP_SRC = '\\s*(?:<=|>=|!=|->|=>|[=+\\-/<>≤≥≠≈×÷·→]|(?<!\\*)\\*(?!\\*))\\s*';
+const EXPR_RE = new RegExp('-?' + T_SRC + '(?:' + OP_SRC + '-?' + T_SRC + ')*', 'g');
+const HANGUL = /[가-힣]/;
+
+function toTeX(e) {
+  let s = e.trim();
+  s = s.replace(/->|→/g, '\\to ').replace(/=>/g, '\\Rightarrow ').replace(/<=|≤/g, '\\le ').replace(/>=|≥/g, '\\ge ')
+       .replace(/!=|≠/g, '\\ne ').replace(/≈/g, '\\approx ').replace(/×/g, '\\times ').replace(/÷/g, '\\div ')
+       .replace(/·/g, '\\cdot ').replace(/(?<!\*)\*(?!\*)/g, '\\cdot ').replace(/±/g, '\\pm ')
+       .replace(/∞|\binfinity\b|\binf\b/g, '\\infty ').replace(/π/g, '\\pi ').replace(/°/g, '^\\circ ')
+       .replace(/²/g, '^2').replace(/³/g, '^3').replace(/⁴/g, '^4');
+  s = s.replace(/√\(/g, 'sqrt(').replace(/√([A-Za-z0-9.]+)/g, '\\sqrt{$1}');
+  s = replaceCall(s, 'sqrt', a => '\\sqrt{' + a + '}');
+  s = replaceCall(s, 'abs', a => '\\left|' + a + '\\right|');
+  s = s.replace(/(^|[^\\A-Za-z])(sin|cos|tan|cot|sec|csc|log|ln|lim|exp)(?![A-Za-z])/g, '$1\\$2');
+  s = s.replace(/\(([^()]*)\)\/\(([^()]*)\)/g, '\\frac{$1}{$2}')
+       .replace(/\(([^()]*)\)\/(\d+(?:\.\d+)?|[A-Za-z])(?![\w(])/g, '\\frac{$1}{$2}')
+       .replace(/(^|[^\w\\}])(\d+(?:\.\d+)?|[A-Za-z])\/\(([^()]*)\)/g, '$1\\frac{$2}{$3}')
+       .replace(/(^|[^\w\\}])(\d+(?:\.\d+)?|[A-Za-z])\/(\d+(?:\.\d+)?|[A-Za-z])(?![\w(])/g, '$1\\frac{$2}{$3}');
+  s = s.replace(/([\^_])\(([^()]*)\)/g, '$1{$2}').replace(/([\^_])(-?\d{2,})/g, '$1{$2}').replace(/([\^_])-(\d|[A-Za-z])/g, '$1{-$2}');
+  return s;
+}
+
+function looksMath(core, off, whole) {
+  if (/\S*:\/\/\S*$/.test(whole.slice(0, off + core.length))) return false;      // 주소(URL)
+  const hasOp = /(<=|>=|!=|->|=>|[=+\/<>≤≥≠≈×÷·→]|(?<!\*)\*(?!\*)|(?<=[A-Za-z0-9)\]}])-(?=[A-Za-z0-9(]))/.test(core);
+  if (hasOp) {
+    const flat = core.replace(/\s/g, '');
+    if (/^[\d.]+(?:-[\d.]+)+$/.test(flat)) return false;                              // 2024-09-20, 3-4
+    const words = (core.match(/[A-Za-z]{2,}/g) || []).filter(w => !MFUNC.test(w));
+    const strong = /[=^_]|\d|\(/.test(core);
+    if (words.length && !strong) return false;                                        // and/or, Yes/No
+    return true;
+  }
+  if (/[\^_²³⁴°√π∞]/.test(core)) return true;
+  if (/^\d+[A-Za-z]+$/.test(core)) return true;                                       // 2x
+  const f = core.match(/^([A-Za-z]+)\(.*\)$/);
+  if (f && (f[1].length === 1 || MFUNC.test(f[1]))) return true;                      // f(x), sin(x)
+  if (/^\(.*[+\-*\/].*\)$/.test(core) && /[A-Za-z]/.test(core)) return true;
+  if (/^[A-Za-z]$/.test(core)) {                                                      // x가, 점 A를
+    const prev = whole[off - 1] || '', next = whole[off + core.length] || '';
+    if (HANGUL.test(prev) || HANGUL.test(next)) return true;
+    if (/^(?:,\s*[A-Za-z])+(?=[가-힣])/.test(whole.slice(off + 1))) return true;
+    if (/(?:[A-Za-z],\s*)+$/.test(whole.slice(0, off)) && HANGUL.test(next)) return true;
+  }
+  return false;
+}
+
+function wrapPlainMath(str) {
+  let out = str.replace(EXPR_RE, (m, off, whole) => {
+    const t = m.match(/[.,\s]+$/), tail = t ? t[0] : '';
+    const core = tail ? m.slice(0, -tail.length) : m;
+    if (!core || !looksMath(core, off, whole)) return m;
+    return '$' + toTeX(core) + '$' + tail;
+  });
+  // "f(2) = 4, g(2) = 12" 처럼 쉼표로 이어진 등식은 하나로 합친다
+  const merge = /\$([^$\n]*=[^$\n]*)\$,(\s*)\$([^$\n]*=[^$\n]*)\$/;
+  for (let i = 0; i < 20 && merge.test(out); i++) out = out.replace(merge, (m, a, sp, b) => '$' + a + ',\\; ' + b + '$');
+  // lim_(x->a) 바로 뒤에 이어지는 식은 하나로 합친다
+  out = out.replace(/\$(\\lim_\{[^$\n]*\})\$ \$([^$\n]*)\$/g, (m, a, b) => '$' + a + ' ' + b + '$');
+  return out;
+}
+
+/* \frac{1}{2} 처럼 $ 없이 나온 LaTeX 조각 */
+function wrapBareLatex(str) {
+  if (str.indexOf('\\') < 0) return str;
+  return str.replace(/(?:[A-Za-z0-9.^_+\-*\/=<>|(){}\[\]]|\\[A-Za-z]+|,(?=\s*\\)| (?=[\\A-Za-z0-9^_+\-*\/=<>|(){}\[\]]))+/g, m => {
+    if (!/\\[A-Za-z]/.test(m)) return m;
+    const lead = (m.match(/^\s+/) || [''])[0];
+    const core = m.replace(/[\s,.]+$/, ''), tail = m.slice(core.length);
+    const open = (core.match(/\{/g) || []).length, close = (core.match(/\}/g) || []).length;
+    if (open !== close) return m;
+    return lead + '$' + core.trim() + '$' + tail;
+  });
+}
+
+function autoMath(text) {
+  const mapPlain = (str, fn) => {
+    let o = '', last = 0, m;
+    MATH_RE.lastIndex = 0;
+    while ((m = MATH_RE.exec(str))) { o += fn(str.slice(last, m.index)) + m[0]; last = m.index + m[0].length; }
+    return o + fn(str.slice(last));
+  };
+  try { return mapPlain(mapPlain(text, wrapBareLatex), wrapPlainMath); }
+  catch (e) { noteErr('자동 변환', e.message); return text; }
+}
+
 function render(input) {
+  input = autoMath(input);
   const paras = input.replace(/\r\n?/g, '\n').split(/\n{2,}/).filter(p => p.trim());
   return paras.map(p => {
     let html = '', last = 0, m;
@@ -1172,8 +1299,20 @@ function setView(v) {
 }
 function setMode(student) { setView(student ? 'student' : 'edit'); }
 function update() {
+  document.body.classList.toggle('empty', !src.value.trim());
   out.innerHTML = render(src.value);
   try { localStorage.setItem('src', src.value); } catch (e) {}
+}
+function openSrc() { $('srcBox').open = true; src.focus(); }
+async function doPaste() {
+  try {
+    src.value = await navigator.clipboard.readText();
+    if (!src.value.trim()) { alert('클립보드가 비어 있습니다. Gemini 답변을 먼저 복사해 주세요.'); return; }
+    setView('edit'); update(); window.scrollTo(0, 0);
+  } catch (e) {
+    setView('edit'); openSrc();
+    alert('붙여넣기 권한이 없어요. 열린 칸을 길게 눌러 “붙여넣기”를 선택해 주세요.');
+  }
 }
 
 src.addEventListener('input', update);
@@ -1192,12 +1331,22 @@ $('copyAltPrompt').onclick = async () => {
   try { await navigator.clipboard.writeText($('altPrompt').textContent); $('copyAltPrompt').textContent = '복사됨'; }
   catch (e) { alert('복사 권한이 없습니다. 위 글을 길게 눌러 직접 복사해 주세요.'); }
 };
-$('sample').onclick = () => { src.value = SAMPLE; update(); if (document.body.classList.contains('student')) setMode(true); };
-$('clear').onclick = () => { src.value = ''; update(); if (document.body.classList.contains('student')) renderStudent(); };
-$('paste').onclick = async () => {
-  try { src.value = await navigator.clipboard.readText(); update(); }
-  catch (e) { alert('붙여넣기 권한이 없습니다. 입력창을 길게 눌러 직접 붙여넣어 주세요.'); }
-};
+const RAW_SAMPLE = `조건 (가)에서는 x가 무한대로 갈 때, 분자의 다항식의 최고차항 차수와 계수를 조합했을 때, f(x)와 g(x)의 차수를 합쳐서 5가 되고, 극한값이 4가 되는 차수 조합을 먼저 찾습니다.
+
+조건 (나)를 통해 f(x)와 g(x)의 최저차항과 계수들을 확인해서, 최종적으로 f(x) = 2x와 g(x) = x^3 + x^2을 구했어요.
+
+그래서 f(2) = 4, g(2) = 12가 되어, 합계는 16이 됩니다. 극한은 lim_(x->∞) (2x)/(x^3) = 0 이고 x² ≥ 0 입니다.`;
+$('sample').onclick = () => { src.value = RAW_SAMPLE; setView('edit'); update(); };
+$('sample2').onclick = $('sample').onclick;
+$('clear').onclick = () => { src.value = ''; setView('edit'); update(); };
+$('paste').onclick = doPaste;
+$('paste2').onclick = doPaste;
+$('typeBtn').onclick = openSrc;
+$('toStu').onclick = () => setMode(true);
+$('copyPrompt2').onclick = () => $('copyPrompt').click();
+$('menuBtn').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'none' ? 'flex' : 'none'; };
+$('menu').addEventListener('click', e => { if (e.target.closest('button')) $('menu').style.display = 'none'; });
+document.addEventListener('click', e => { if (!e.target.closest('#menu')) $('menu').style.display = 'none'; });
 $('size').oninput = e => {
   const px = e.target.value + 'px';
   out.style.fontSize = px; stu.style.fontSize = px;
@@ -1206,7 +1355,7 @@ $('copyPrompt').onclick = async () => {
   try { await navigator.clipboard.writeText($('promptText').textContent); $('copyPrompt').textContent = '복사됨'; }
   catch (e) { alert('복사 권한이 없습니다. 위 글을 길게 눌러 직접 복사해 주세요.'); }
 };
-out.style.fontSize = '20px'; stu.style.fontSize = '20px';
+out.style.fontSize = '22px'; stu.style.fontSize = '22px';
 
 try { src.value = localStorage.getItem('src') || ''; } catch (e) {}
 update();
