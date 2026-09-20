@@ -25,9 +25,13 @@ const RULES = [
   '   f: 식 (함수 그래프. g:, h:도 가능. 곱하기 생략 가능, 거듭제곱 ^, 사용 가능: sqrt() abs() sin() cos() tan() ln() exp() pi)',
   '   point: 이름 x y / segment: x1 y1 x2 y2 / circle: 중심x 중심y 반지름 / polygon: x1 y1; x2 y2; x3 y3',
   '   vline: a (x=a 세로선) / hline: b (y=b 가로선)',
+  '   slider: 이름 최소 최대 (예: slider: a 0 4 → 식에서 a를 변수로 쓰고 학생이 끌어 바꿔 본다. 곱하기는 a*x처럼 * 를 쓴다)',
+  '   move: 점이름 함수이름 x시작 x끝 (예: move: P f 0 3 → 점 P가 f 위를 움직이며 자취를 남긴다)',
+  '   sweep: 함수이름 x시작 x끝 (예: sweep: f 0 3 → f 아래 넓이가 채워진다)',
   '5. 좌표와 반지름은 숫자만 쓴다. 분수는 1/2처럼 쓸 수 있다.',
   '6. 서로 다른 접근이어야 한다. (그래프 해석, 도형의 길이·넓이·작도, 대칭·평행이동 등)',
   '7. 보조선처럼 나중에 나오는 요소는 그림 정보 줄 끝에 @2처럼 붙인다. 그 번호의 단계 설명이 나올 때 그림에 나타난다.',
+  '8. slider, move, sweep은 학생이 이해하는 데 도움이 될 때만 풀이당 1~2개 쓴다. move/sweep은 앞에서 정의한 f, g, h 이름을 쓰고, 줄 끝에 @2를 붙이면 그 단계에서 저절로 움직인다.',
 ].join('\n');
 
 function buildPrompt(hasImage, problemText, solutionText) {

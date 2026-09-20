@@ -119,9 +119,9 @@
   .linkbtn { border:0; background:transparent; color:var(--accent); text-decoration:underline; padding:4px; }
   .rhead { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
   .rhead h2 { margin:0; }
-  body.empty #resultSec { display:none; }
-  body:not(.empty) #hero { display:none; }
-  body.empty #srcBox:not([open]) { display:none; }
+  body.nosrc #resultSec { display:none; }
+  body:not(.nosrc) #hero { display:none; }
+  body.nosrc #srcBox:not([open]) { display:none; }
   #srcBox { margin:0; }
   #srcBox textarea { height:auto; min-height:180px; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:8px; }
   .promptbox { display:none !important; }
@@ -130,6 +130,10 @@
   #diag[style*="none"] { display:none !important; }
   .diaghead { display:flex; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
   #diagOut { margin:0; padding:12px 14px; overflow:auto; white-space:pre-wrap; font:13px/1.65 ui-monospace,Consolas,monospace; }
+
+  .animbar { display:flex; gap:8px; align-items:center; padding:8px 12px 12px; }
+  .animbar input[type=range] { flex:1; min-width:60px; }
+  .animbar select { font:inherit; padding:6px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--text); }
 
   /* 캡처 이미지 */
   .capstage { margin:8px 0; overflow:auto; background:var(--bg); border-radius:8px; padding:6px; }
@@ -318,7 +322,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v6 · 2026-09-20 서버 자동 정리(문제 캡처 + 풀이 글)';
+const APP_VERSION = 'v7 · 2026-09-20 JSXGraph 애니메이션';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -613,9 +617,13 @@ const ALT_PROMPT = [
   '   polygon: x1 y1; x2 y2; x3 y3',
   '   vline: a                (x=a 세로선)',
   '   hline: b                (y=b 가로선)',
+  '   slider: 이름 최소 최대  (예: slider: a 0 4 → 식에서 a를 변수로 쓰고 학생이 끌어 바꿔 본다. 곱하기는 a*x처럼 * 를 쓴다)',
+  '   move: 점이름 함수이름 x시작 x끝   (예: move: P f 0 3 → 점 P가 f 위를 움직이며 자취를 남긴다)',
+  '   sweep: 함수이름 x시작 x끝        (예: sweep: f 0 3 → f 아래 넓이가 채워진다)',
   '5. 좌표와 반지름은 숫자만 쓴다. 분수는 1/2처럼 쓸 수 있다.',
   '6. 3가지 풀이는 접근이 서로 달라야 한다. (그래프 해석, 도형의 길이·넓이·작도, 대칭·평행이동 등)',
   '7. 보조선처럼 나중에 나오는 요소는 그림 정보 줄 끝에 @2처럼 붙인다. 그 번호의 단계 설명이 나올 때 그림에 나타난다. (안 붙이면 처음부터 보인다)  예: segment: 0 0 2 4 @2',
+  '8. slider, move, sweep은 학생이 이해하는 데 도움이 될 때만 풀이당 1~2개 쓴다. move/sweep은 앞에서 정의한 f, g, h 이름을 쓰고, 줄 끝에 @2를 붙이면 그 단계에서 저절로 움직인다.',
 ].join('\n');
 const IMG_NOTE = [
   '[첨부 이미지]',
@@ -642,6 +650,8 @@ g: x^3 + x^2 @1
 vline: 2 @2
 point: A 2 4 @2
 point: B 2 12 @2
+move: P g 0 2 @2
+sweep: f 0 2 @3
 
 ### 풀이 2: 세로 선분을 이어 붙이기
 1단계. $x$축 위의 점 $H(2,0)$에서 위로 선분을 그린다.
@@ -668,7 +678,19 @@ y: -1 6
 polygon: 0 0; 2 0; 2 4 @1
 polygon: 0 0; 4 0; 4 3; 0 3 @2
 point: O 0 0 @1
-point: A 2 4 @1`;
+point: A 2 4 @1
+
+### 풀이 4: 기울기를 움직여 보기
+1단계. 직선 $y=ax$의 기울기 $a$를 $0$에서 $4$까지 바꿔 본다.
+2단계. $x=2$에서의 높이 $2a$는 $a=2$일 때 $4$가 된다.
+정답: $f(2)=4$
+@graph
+x: -1 5
+y: -2 10
+slider: a 0 4
+f: a*x
+vline: 2
+point: A 2 4`;
 
 /* 안전한 수식 계산기: 사용자 텍스트를 eval 하지 않고 직접 해석한다 */
 function prepExpr(src) {
@@ -681,7 +703,7 @@ function prepExpr(src) {
     .replace(/\)([a-z0-9(])/g, ')*$1')
     .replace(/\bx\(/g, 'x*(');
 }
-function compileExpr(src) {
+function compileExpr(src, PARAMS) {          // PARAMS: slider 값 보관소. 있으면 한 글자 변수(a, k …)를 매개변수로 읽는다
   const s = prepExpr(src);
   const FN = { sin: Math.sin, cos: Math.cos, tan: Math.tan, sqrt: Math.sqrt, abs: Math.abs,
                ln: Math.log, log: Math.log10, exp: Math.exp, asin: Math.asin, acos: Math.acos, atan: Math.atan };
@@ -723,6 +745,7 @@ function compileExpr(src) {
       if (id === 'x') return x => x;
       if (id === 'pi') return () => Math.PI;
       if (id === 'e') return () => Math.E;
+      if (PARAMS && id.length === 1) return () => (PARAMS[id] === undefined ? NaN : PARAMS[id]);
       if (FN[id]) {
         if (s[p++] !== '(') bad(id + ' 뒤에 ( 가 필요함');
         const a = expr(); if (s[p++] !== ')') bad('괄호가 닫히지 않음');
@@ -746,7 +769,7 @@ function num(t) {
 function nums(str) { return str.trim().split(/[\s,]+/).filter(Boolean).map(num); }
 
 function parseSpec(lines) {
-  const sp = { x: [-6, 6], y: [-6, 6], fns: [], points: [], segs: [], circles: [], polys: [], vlines: [], hlines: [], warn: [] };
+  const sp = { x: [-6, 6], y: [-6, 6], fns: [], points: [], segs: [], circles: [], polys: [], vlines: [], hlines: [], sliders: [], moves: [], sweeps: [], params: {}, warn: [] };
   let fi = 0;
   for (const raw of lines) {
     const m = raw.match(/^\s*([a-zA-Z가-힣]+)\s*[:：]\s*(.*)$/);
@@ -757,8 +780,8 @@ function parseSpec(lines) {
         const n = nums(val); if (n.length !== 2 || n.some(isNaN) || n[0] >= n[1]) throw new Error('범위는 "최소 최대" 숫자 두 개');
         sp[key] = n;
       } else if (['f', 'g', 'h', 'fn'].includes(key)) {
-        const plain = prepExpr(val); compileExpr(val);
-        sp.fns.push({ label: key === 'fn' ? 'f' + (++fi) : key, plain, raw: val, fn: compileExpr(val) });
+        const plain = prepExpr(val);
+        sp.fns.push({ label: key === 'fn' ? 'f' + (++fi) : key, plain, raw: val, fn: compileExpr(val, sp.params) });
       } else if (key === 'point') {
         const t = val.split(/\s+/); let label = '';
         if (isNaN(num(t[0]))) label = t.shift();
@@ -774,6 +797,18 @@ function parseSpec(lines) {
         const pts = val.split(';').map(nums);
         if (pts.length < 3 || pts.some(q => q.length !== 2 || q.some(isNaN))) throw new Error('polygon은 "x y; x y; x y" (3점 이상)');
         sp.polys.push(pts);
+      } else if (key === 'slider') {                               // slider: a 0 5  → 값 a를 0~5로 바꿔 본다
+        const t = val.split(/\s+/), name = (t.shift() || '').toLowerCase(), n = nums(t.join(' '));
+        if (!/^[a-df-wyz]$/.test(name) || n.length !== 2 || n.some(isNaN) || n[0] >= n[1]) throw new Error('slider는 "이름 최소 최대" (이름은 a~z 한 글자, x·e 제외)');
+        sp.sliders.push({ name, min: n[0], max: n[1] }); sp.params[name] = n[0];
+      } else if (key === 'move') {                                 // move: P f 0 3  → 점 P가 f 위를 x=0에서 3까지
+        const t = val.split(/\s+/); const label = t.shift() || '', fn = (t.shift() || '').toLowerCase(), n = nums(t.join(' '));
+        if (!label || !/^(?:[fgh]|f\d+)$/.test(fn) || n.length !== 2 || n.some(isNaN)) throw new Error('move는 "점이름 함수이름 x시작 x끝"');
+        sp.moves.push({ label, fn, x0: n[0], x1: n[1] });
+      } else if (key === 'sweep') {                                // sweep: f 0 3  → f 아래 넓이가 채워진다
+        const t = val.split(/\s+/); const fn = (t.shift() || '').toLowerCase(), n = nums(t.join(' '));
+        if (!/^(?:[fgh]|f\d+)$/.test(fn) || n.length !== 2 || n.some(isNaN)) throw new Error('sweep은 "함수이름 x시작 x끝"');
+        sp.sweeps.push({ fn, x0: n[0], x1: n[1] });
       } else if (key === 'vline' || key === 'hline') {
         const n = num(val); if (isNaN(n)) throw new Error(key + '는 숫자 하나');
         sp[key + 's'].push(n);
@@ -782,6 +817,7 @@ function parseSpec(lines) {
   }
   sp.geo = !!(sp.circles.length || sp.polys.length || sp.segs.length);
   sp.empty = !(sp.fns.length || sp.points.length || sp.geo || sp.vlines.length || sp.hlines.length);
+  sp.anim = !!(sp.sliders.length || sp.moves.length || sp.sweeps.length);
   return sp;
 }
 
@@ -789,7 +825,7 @@ function parseSpec(lines) {
 const AT_RE = /\s*@(\d+)\s*$/;
 function parseSpecSteps(lines) {
   const sp = parseSpec(lines.map(l => l.replace(AT_RE, '')));
-  const st = { fns: [], points: [], segs: [], circles: [], polys: [], vlines: [], hlines: [] };
+  const st = { fns: [], points: [], segs: [], circles: [], polys: [], vlines: [], hlines: [], sliders: [], moves: [], sweeps: [] };
   for (const l of lines) {
     const m = l.match(AT_RE), s = m ? +m[1] : 0;
     const r = parseSpec([l.replace(AT_RE, '')]);
@@ -799,8 +835,9 @@ function parseSpecSteps(lines) {
   return sp;
 }
 function specAt(sp, k) {
-  const c = Object.assign({}, sp);
-  for (const key of Object.keys(sp.st)) c[key] = sp[key].filter((_, i) => sp.st[key][i] <= k);
+  const c = Object.assign({}, sp); c.stv = {};
+  for (const key of Object.keys(sp.st)) { c[key] = sp[key].filter((_, i) => sp.st[key][i] <= k); c.stv[key] = sp.st[key].filter(s => s <= k); }
+  c.anim = !!(c.sliders.length || c.moves.length || c.sweeps.length);
   return c;
 }
 
@@ -832,7 +869,11 @@ function loadCss(url) {
 }
 
 /* --- JSXGraph --- */
-async function drawJSX(box, sp) {
+/* 반환값: { hasAnim, apply(p), play(seconds, onProgress), stop() } — p는 0~1 진행도.
+   opts.autoplayStep 이 있으면 그 단계(@N)에 붙은 움직임만 자동으로 재생하고, 앞 단계 움직임은 끝난 상태로 보여 준다. */
+async function drawJSX(box, sp, opts) {
+  opts = opts || {};
+  if (box.__ctl) box.__ctl.stop();
   loadCss('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraph.css');
   await loadScript('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraphcore.js');
   box.innerHTML = '';
@@ -843,13 +884,74 @@ async function drawJSX(box, sp) {
     boundingbox: [sp.x[0], sp.y[1], sp.x[1], sp.y[0]], axis: true, showCopyright: false,
     showNavigation: false, keepAspectRatio: sp.geo, grid: true,
   });
+  const P = sp.params || {}, S = sp.stv || sp.st || {}, anims = [];
+  const W = sp.x[1] - sp.x[0], Hh = sp.y[1] - sp.y[0];
+  (sp.sliders || []).forEach((s, i) => {                       // 학생이 직접 끌어 볼 수 있는 슬라이더
+    P[s.name] = s.min;
+    const y = sp.y[1] - Hh * 0.07 * (i + 1), x0 = sp.x[0] + W * 0.06;
+    const sl = b.create('slider', [[x0, y], [x0 + W * 0.32, y], [s.min, s.min, s.max]], { name: s.name, snapWidth: 0.01, size: 4, withLabel: true, label: { color: '#111' } });
+    sl.on('drag', () => { P[s.name] = sl.Value(); });
+    anims.push({ step: (S.sliders || [])[i] || 0, apply: p => { const v = s.min + (s.max - s.min) * p; sl.setValue(v); P[s.name] = v; } });
+  });
   sp.fns.forEach((f, i) => b.create('functiongraph', [f.fn], { strokeColor: COLORS[i % 5], strokeWidth: 2.5, highlight: false }));
+  (sp.sweeps || []).forEach((s, i) => {                        // 함수 아래 넓이가 차오르는 효과
+    const f = sp.fns.find(q => q.label === s.fn); if (!f) return;
+    let XE = s.x0;
+    const area = b.create('curve', [[], []], { fillColor: '#2563eb', fillOpacity: 0.25, strokeWidth: 0, highlight: false, fixed: true });
+    area.updateDataArray = function () {
+      const n = 60; this.dataX = [s.x0]; this.dataY = [0];
+      for (let k = 0; k <= n; k++) { const x = s.x0 + (XE - s.x0) * k / n; this.dataX.push(x); this.dataY.push(f.fn(x)); }
+      this.dataX.push(XE, s.x0); this.dataY.push(0, 0);
+    };
+    anims.push({ step: (S.sweeps || [])[i] || 0, apply: p => { XE = s.x0 + (s.x1 - s.x0) * p; } });
+  });
+  (sp.moves || []).forEach((m, i) => {                         // 함수 위를 점이 움직이며 자취를 남긴다
+    const f = sp.fns.find(q => q.label === m.fn); if (!f) return;
+    let X = m.x0;
+    const trail = b.create('curve', [[], []], { strokeColor: '#f59e0b', strokeWidth: 4, highlight: false, fixed: true });
+    trail.updateDataArray = function () {
+      const n = 50; this.dataX = []; this.dataY = [];
+      for (let k = 0; k <= n; k++) { const x = m.x0 + (X - m.x0) * k / n; this.dataX.push(x); this.dataY.push(f.fn(x)); }
+    };
+    b.create('point', [() => X, () => f.fn(X)], { name: m.label, size: 5, fixed: true, fillColor: '#f59e0b', strokeColor: '#b45309', label: { color: '#111' } });
+    anims.push({ step: (S.moves || [])[i] || 0, apply: p => { X = m.x0 + (m.x1 - m.x0) * p; } });
+  });
   sp.vlines.forEach(a => b.create('line', [[a, 0], [a, 1]], { strokeColor: '#888', dash: 2, highlight: false, fixed: true }));
   sp.hlines.forEach(a => b.create('line', [[0, a], [1, a]], { strokeColor: '#888', dash: 2, highlight: false, fixed: true }));
   sp.polys.forEach(p => b.create('polygon', p, { vertices: { visible: false }, fillColor: '#2563eb', fillOpacity: 0.15, borders: { strokeColor: '#2563eb' }, highlight: false, fixed: true }));
   sp.circles.forEach(c => b.create('circle', [[c[0], c[1]], c[2]], { strokeColor: '#e11d48', highlight: false, fixed: true }));
   sp.segs.forEach(s => b.create('segment', [[s[0], s[1]], [s[2], s[3]]], { strokeColor: '#d97706', strokeWidth: 3, highlight: false, fixed: true }));
   sp.points.forEach(p => b.create('point', [p.x, p.y], { name: p.label, size: 3, fixed: true, strokeColor: '#111', fillColor: '#111', label: { color: '#111' } }));
+
+  /* 재생 제어 */
+  let raf = 0, token = 0;
+  const ctl = {
+    hasAnim: anims.length > 0,
+    apply(p, onlyStep) {                                        // onlyStep: 그 단계 움직임만 p, 앞 단계는 끝난 상태, 뒤 단계는 시작 상태
+      anims.forEach(a => a.apply(onlyStep === undefined ? p : (a.step < onlyStep ? 1 : a.step === onlyStep ? p : 0)));
+      b.update();
+    },
+    stop() { token++; if (raf) cancelAnimationFrame(raf); raf = 0; },
+    play(seconds, onProgress, from, onlyStep) {
+      ctl.stop(); const tk = token; let p0 = from || 0, t0 = performance.now();
+      return new Promise(res => {
+        const tick = now => {
+          if (tk !== token) { res(false); return; }
+          const p = Math.min(1, p0 + (now - t0) / (seconds * 1000));
+          ctl.apply(p, onlyStep); if (onProgress) onProgress(p);
+          if (p >= 1) { raf = 0; res(true); } else raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+      });
+    },
+  };
+  box.__ctl = ctl;
+  if (opts.autoplayStep !== undefined && anims.some(a => a.step === opts.autoplayStep)) {
+    ctl.apply(0, opts.autoplayStep); ctl.play(2.8, null, 0, opts.autoplayStep);
+  } else if (opts.autoplayStep !== undefined) {
+    ctl.apply(1, opts.autoplayStep + 1);                        // 이 단계에 새 움직임이 없으면 앞 단계까지의 결과를 그대로 둔다
+  }
+  return ctl;
 }
 
 /* --- GeoGebra --- */
@@ -868,6 +970,7 @@ async function drawGGB(box, sp) {
           clearTimeout(timer);
           api.setCoordSystem(sp.x[0], sp.x[1], sp.y[0], sp.y[1]);
           api.setGridVisible(true);
+          (sp.sliders || []).forEach(s => api.evalCommand(s.name + '=' + s.min));       // 움직임은 JSXGraph에서만: 여기서는 시작 값으로 그린다
           sp.fns.forEach(f => api.evalCommand(f.label + '(x)=' + f.plain.replace(/\blog\(/g, 'log10(')));
           sp.vlines.forEach(a => api.evalCommand('x=' + a));
           sp.hlines.forEach(a => api.evalCommand('y=' + a));
@@ -918,6 +1021,7 @@ async function drawDesmos(box, sp) {
   const calc = Desmos.GraphingCalculator(box, { expressions: false, settingsMenu: false, keypad: false, zoomButtons: true });
   calc.setMathBounds({ left: sp.x[0], right: sp.x[1], bottom: sp.y[0], top: sp.y[1] });
   let n = 0; const id = () => 'e' + (++n);
+  (sp.sliders || []).forEach(s => calc.setExpression({ id: id(), latex: s.name + '=' + s.min, sliderBounds: { min: String(s.min), max: String(s.max), step: '' } }));
   sp.fns.forEach((f, i) => calc.setExpression({ id: id(), latex: f.label + '(x)=' + toDesmos(f.plain), color: COLORS[i % 5] }));
   sp.vlines.forEach(a => calc.setExpression({ id: id(), latex: 'x=' + a, color: '#888888', lineStyle: Desmos.Styles.DASHED }));
   sp.hlines.forEach(a => calc.setExpression({ id: id(), latex: 'y=' + a, color: '#888888', lineStyle: Desmos.Styles.DASHED }));
@@ -977,7 +1081,8 @@ function renderAlt() {
     list.forEach(k => {
       html += '<div class="gpanel' + (pk === k ? ' picked' : '') + '"><div class="ghead"><b>' + ENGINES[k].name + '</b><span class="chip">' + ENGINES[k].tag + '</span>' +
               '<button data-pick="' + k + '"' + (pk === k ? ' class="on"' : '') + '>' + (pk === k ? '선택됨' : '이걸로 선택') + '</button></div>' +
-              '<div class="gbox" id="gb-' + k + '"></div><div class="gnote" id="gn-' + k + '">불러오는 중…</div></div>';
+              '<div class="gbox" id="gb-' + k + '"></div><div class="gnote" id="gn-' + k + '">불러오는 중…</div>' +
+              (k === 'jsx' && sp.anim ? '<div class="animbar" id="ab-jsx"></div>' : '') + '</div>';
     });
     html += '</div>';
   }
@@ -1000,11 +1105,35 @@ function renderAlt() {
       for (const k of (altView === 'compare' ? Object.keys(ENGINES) : [altView])) {
         if (token !== altToken) return;
         const note = $('gn-' + k);
-        try { await DRAW[k]($('gb-' + k), sp); if (note) note.textContent = '완료'; }
+        try {
+          const ctl = await DRAW[k]($('gb-' + k), sp); if (note) note.textContent = '완료';
+          if (k === 'jsx' && ctl && ctl.hasAnim && token === altToken) animBar(ctl, $('ab-jsx'));
+        }
         catch (e) { if (note) { note.textContent = '표시 실패: ' + e.message; note.classList.add('bad'); } }
       }
     })();
   }
+}
+/* JSXGraph 움직임 재생 바: 재생·멈춤, 처음으로, 진행도 끌기, 속도 */
+function animBar(ctl, el) {
+  if (!el) return;
+  el.innerHTML = '<button class="primary" data-a="play">▶ 움직이기</button><button data-a="reset" title="처음으로">↺</button>' +
+    '<input type="range" min="0" max="1000" value="0" data-a="pos"><select data-a="spd"><option value="9">느리게</option><option value="5" selected>보통</option><option value="2.5">빠르게</option></select>';
+  const q = s => el.querySelector('[data-a="' + s + '"]'), btn = q('play'), pos = q('pos'), spd = q('spd');
+  let p = 0, playing = false;
+  const setP = v => { p = v; pos.value = Math.round(v * 1000); };
+  const stopUi = () => { playing = false; btn.textContent = '▶ 움직이기'; };
+  const play = async () => {
+    if (playing) { ctl.stop(); stopUi(); return; }
+    if (p >= 1) { setP(0); ctl.apply(0); }
+    playing = true; btn.textContent = '⏸ 멈춤';
+    const done = await ctl.play(+spd.value, setP, p);
+    if (done) { playing = false; btn.textContent = '▶ 다시 보기'; }
+  };
+  btn.onclick = play;
+  q('reset').onclick = () => { ctl.stop(); stopUi(); setP(0); ctl.apply(0); };
+  pos.oninput = () => { ctl.stop(); stopUi(); setP(pos.value / 1000); ctl.apply(p); };
+  setTimeout(play, 500);                                        // 처음 한 번은 자동으로 보여 준다
 }
 function updateAltPrompt() {
   const p = $('altProblem').value.trim() || '(여기에 문제를 붙여넣으세요)';
@@ -1219,7 +1348,7 @@ function hwShowStep(k) {
   hw.curStep = k;
   if (hw.mode !== 'rebuilt' || k === hw.figStep) return;
   hw.figStep = k;
-  hw.figP = hw.figP.then(() => drawJSX($('hwFig'), specAt(hw.sp, k)))
+  hw.figP = hw.figP.then(() => drawJSX($('hwFig'), specAt(hw.sp, k), { autoplayStep: k }))
     .catch(e => { const n = $('hwFigNote'); if (n) { n.textContent = '도형 표시 실패: ' + e.message; n.classList.add('bad'); } });
 }
 function hwFigure() {
@@ -1609,7 +1738,7 @@ function setView(v) {
 }
 function setMode(student) { setView(student ? 'student' : 'edit'); }
 function update() {
-  document.body.classList.toggle('empty', !src.value.trim());
+  document.body.classList.toggle('nosrc', !src.value.trim());
   out.innerHTML = render(src.value);
   $('toAlt').style.display = $('altSrc').value.trim() ? '' : 'none';
   try { localStorage.setItem('src', src.value); } catch (e) {}
