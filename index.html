@@ -92,6 +92,15 @@
   #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#1d2330; color:#fff; padding:11px 18px; border-radius:24px; font-size:15px; z-index:50; max-width:min(92vw,560px); box-shadow:0 6px 20px rgba(0,0,0,.3); display:none; line-height:1.5; }
   #toast.bad { background:#b3261e; }
 
+  /* 문제 + 풀이 자동 정리 */
+  #jobBox { margin:0; text-align:left; }
+  .jobgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+  @media (max-width:700px) { .jobgrid { grid-template-columns:1fr; } }
+  .slot { border:1px dashed var(--line); border-radius:12px; padding:10px; min-height:150px; background:var(--bg); }
+  .slothead { font-size:13px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+  #jobImg { max-width:100%; max-height:220px; border-radius:8px; display:none; background:#fff; }
+  #jobTxt { width:100%; height:150px; min-height:100px; border:0; background:transparent; color:var(--text); font:14px/1.5 system-ui,sans-serif; resize:vertical; outline:0; }
+
   /* 단순화한 홈 화면 */
   header { position:sticky; }
   button.big { font-size:17px; padding:10px 20px; font-weight:600; }
@@ -186,8 +195,27 @@
       <p class="sub"><button id="typeBtn" class="linkbtn">직접 입력하기</button> · <button id="sample2" class="linkbtn">예시로 해보기</button></p>
     </div>
   </section>
+  <details id="jobBox" class="altbox">
+    <summary>🧩 문제 + 풀이 자동 정리 (서버 연결 시)</summary>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 0;line-height:1.6">① 문제를 캡처해 <b>공유 → 수식변환</b> ② Gemini 풀이 글을 <b>공유</b> 하면, 서버가 문제·풀이 정리와 다른 풀이(그래프·도형)를 한 번에 만들어 줍니다.</p>
+    <div class="jobgrid">
+      <div class="slot">
+        <div class="slothead">① 문제 (캡처)</div>
+        <img id="jobImg" alt="문제 이미지">
+        <div id="jobImgEmpty" style="font-size:14px;color:var(--muted)">아직 없어요. 스크린샷을 공유하거나 <button id="jobPick" class="linkbtn">이미지 선택</button></div>
+      </div>
+      <div class="slot">
+        <div class="slothead">② 풀이 (Gemini 글)</div>
+        <textarea id="jobTxt" placeholder="Gemini 풀이 글을 공유하거나 여기에 붙여넣으세요"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button id="jobRun" class="primary">✨ 자동 정리</button>
+      <button id="jobClear">비우기</button>
+    </div>
+  </details>
   <section id="resultSec">
-    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
+    <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
     <div id="out" class="math-text"></div>
   </section>
   <details id="srcBox" class="altbox">
@@ -226,6 +254,14 @@
     <input id="aiKey" type="password" autocomplete="off" placeholder="여기에만 붙여넣으세요">
     <label for="aiModel">모델 이름</label>
     <input id="aiModel" autocomplete="off">
+    <hr style="margin:18px 0 12px;border:0;border-top:1px solid var(--line)">
+    <h3 style="font-size:16px">자동 정리 서버 (선택)</h3>
+    <p>서버를 연결하면 <b>문제 캡처 + 풀이 글</b>을 보내 한 번에 정리합니다. 이때는 위의 AI 키가 필요 없고, 키는 서버에만 있습니다.</p>
+    <label for="srvUrl">서버 주소</label>
+    <input id="srvUrl" autocomplete="off" placeholder="https://이름.계정.workers.dev">
+    <label for="srvCode">접근 코드</label>
+    <input id="srvCode" type="password" autocomplete="off" placeholder="서버에 설정한 코드">
+    <div class="row"><button id="srvTest">서버 연결 테스트</button></div>
     <div class="row">
       <button id="aiSave" class="primary">저장</button>
       <button id="aiTest">연결 테스트</button>
@@ -282,7 +318,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v5 · 2026-09-20 공유 받기 + AI 화면 읽기';
+const APP_VERSION = 'v6 · 2026-09-20 서버 자동 정리(문제 캡처 + 풀이 글)';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1277,6 +1313,12 @@ const DIAG_CHECKS = [
     const regs = await navigator.serviceWorker.getRegistrations();
     return { ok: regs.length > 0, info: regs.length ? '등록됨 (' + (navigator.serviceWorker.controller ? '적용 중' : '다음 열 때부터 적용') + ')' : '등록 안 됨 — https 주소에서 크롬으로 열어야 합니다' };
   }],
+  ['자동 정리 서버', async () => {
+    const c = srvCfg(); if (!c.url) return { ok: false, info: '아직 연결 안 함 (메뉴 → AI 설정)' };
+    const res = await withTimeout(fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': c.code }, body: JSON.stringify({ ping: true }) }), 15000, '15초 안에 응답 없음');
+    const d = await res.json().catch(() => null);
+    return { ok: res.ok, info: res.ok ? '연결됨 (AI: ' + d.provider + ')' : ((d && d.error) || res.status) };
+  }],
   ['AI 키', async () => { const c = aiCfg(); return { ok: !!c.key, info: c.key ? c.provider + ' / ' + c.model + ' 저장됨' : '아직 저장 안 함 (스크린샷 읽기에 필요)' }; }],
   ['캔버스 읽기(도형 자동 찾기)', async () => {
     const c = document.createElement('canvas'); c.width = c.height = 4;
@@ -1424,7 +1466,62 @@ async function aiReadScreen(blob) {
     else { toast(e.message, 7000, true); noteErr('AI', e.message); }
   }
 }
+/* ---------- 서버 자동 처리: 문제(캡처) + 풀이(글) ---------- */
+function srvCfg() { try { return { url: (localStorage.getItem('srvUrl') || '').trim(), code: localStorage.getItem('srvCode') || '' }; } catch (e) { return { url: '', code: '' }; } }
+const srvOn = () => { const c = srvCfg(); return !!(c.url && c.code); };
+let jobBusy = false;
+function jobGet() { try { return { img: localStorage.getItem('job_img') || '', txt: localStorage.getItem('job_txt') || '' }; } catch (e) { return { img: '', txt: '' }; } }
+function jobSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { toast('이 브라우저에서는 저장할 수 없어요.', 4000, true); } }
+function jobRender() {
+  const j = jobGet(), im = $('jobImg');
+  if (j.img) { im.src = j.img; im.style.display = 'block'; $('jobImgEmpty').style.display = 'none'; }
+  else { im.removeAttribute('src'); im.style.display = 'none'; $('jobImgEmpty').style.display = 'block'; }
+  if ($('jobTxt').value !== j.txt) $('jobTxt').value = j.txt;
+  if (j.img || j.txt) $('jobBox').open = true;
+}
+async function jobSetImage(blob) { const b64 = await imageToB64(blob, 1400); jobSet('job_img', 'data:image/jpeg;base64,' + b64); jobRender(); }
+function offerAsSolution(text) {          // 문제 이미지가 대기 중일 때 들어온 글은 "풀이"로 쓴다
+  if (!(srvOn() && jobGet().img)) return false;
+  jobSet('job_txt', text); jobRender(); setView('edit'); jobRun(); return true;
+}
+function applyJobResult(data, imgURL) {
+  const problem = (data.problem || '').trim(), sol = (data.solution || '').trim(), alt = (data.alternatives || '').trim();
+  if (!sol && !alt) { toast('서버가 정리한 내용이 비어 있어요. 다시 시도해 주세요.', 6000, true); return; }
+  src.value = (problem ? problem + '\n\n' : '') + sol;
+  $('altProblem').value = problem; $('altSrc').value = alt; altIdx = 0;
+  capURL = imgURL; updateAltPrompt();
+  jobSet('job_img', ''); jobSet('job_txt', ''); jobRender();
+  setView('edit'); update(); window.scrollTo(0, 0);
+  toast('정리 완료!' + (alt ? ' 다른 풀이(그래프·도형)도 만들었어요.' : ''), 5000);
+}
+async function jobRun() {
+  if (jobBusy) return;
+  const c = srvCfg();
+  if (!(c.url && c.code)) { openAiDlg('서버 주소와 접근 코드를 입력해 주세요.'); return; }
+  const j = jobGet(), txt = $('jobTxt').value.trim();
+  if (!j.img) { toast('문제 이미지를 먼저 넣어 주세요.', 4000, true); return; }
+  if (!txt) { toast('풀이 글을 넣어 주세요.', 4000, true); return; }
+  jobBusy = true; toast('서버에서 문제·풀이를 정리하는 중… (20~60초)', 0);
+  try {
+    let res;
+    try {
+      res = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': c.code }, body: JSON.stringify({ problemImage: j.img.split(',')[1], solutionText: txt }) });
+    } catch (e) { throw new Error('서버에 연결하지 못했어요. 서버 주소와 인터넷 연결을 확인해 주세요.'); }
+    let data = null; try { data = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((data && data.error) || ('서버 오류 (' + res.status + ')'));
+    applyJobResult(data, j.img);
+  } catch (e) { toast(e.message, 8000, true); noteErr('서버 처리', e.message); }
+  finally { jobBusy = false; }
+}
+
 function handleImage(blob) {
+  if (srvOn()) {                            // 서버 연결 시: 캡처는 "문제"로 보관하고 풀이 글을 기다린다
+    jobSetImage(blob).then(() => {
+      setView('edit'); $('jobBox').open = true; window.scrollTo(0, 0);
+      if (jobGet().txt) jobRun(); else toast('문제 이미지를 저장했어요. 이제 Gemini 풀이 글을 공유하거나 붙여넣어 주세요.', 7000);
+    }).catch(e => { toast('이미지를 읽지 못했어요: ' + e.message, 6000, true); });
+    return;
+  }
   if (!aiCfg().key) { pendingImage = blob; openAiDlg('스크린샷을 읽으려면 AI 키가 필요해요. 키를 저장하면 바로 읽어 드려요.'); return; }
   aiReadScreen(blob);
 }
@@ -1434,6 +1531,7 @@ function openAiDlg(msg) {
   const cfg = aiCfg();
   $('aiProv').value = cfg.provider; $('aiKey').value = cfg.key; $('aiModel').value = cfg.model;
   $('aiMsg').textContent = msg || ''; $('aiMsg').style.color = '';
+  const s = srvCfg(); $('srvUrl').value = s.url; $('srvCode').value = s.code;
   $('aiDlg').style.display = 'flex';
 }
 function aiSaveForm() {
@@ -1442,6 +1540,8 @@ function aiSaveForm() {
     localStorage.setItem('aiProvider', p);
     localStorage.setItem('aiKey_' + p, $('aiKey').value.trim());
     localStorage.setItem('aiModel_' + p, $('aiModel').value.trim() || AI_DEFAULTS[p]);
+    localStorage.setItem('srvUrl', $('srvUrl').value.trim());
+    localStorage.setItem('srvCode', $('srvCode').value);
   } catch (e) { $('aiMsg').textContent = '이 브라우저에서는 저장할 수 없어요.'; return false; }
   return true;
 }
@@ -1488,6 +1588,7 @@ async function takeShared() {
     if (blob) { handleImage(blob); return; }
     if (!text) { toast('공유된 내용이 비어 있어요.', 4000, true); return; }
     if (/^https?:\/\/\S+$/.test(text)) { toast('링크만 공유됐어요. 답변 글을 길게 눌러 선택한 뒤 공유하거나, 복사해서 붙여넣어 주세요.', 8000, true); return; }
+    if (offerAsSolution(text)) return;
     src.value = text; setView('edit'); update(); toast('공유한 글을 가져왔어요.');
   } catch (e) { noteErr('공유 받기', e.message); }
 }
@@ -1510,6 +1611,7 @@ function setMode(student) { setView(student ? 'student' : 'edit'); }
 function update() {
   document.body.classList.toggle('empty', !src.value.trim());
   out.innerHTML = render(src.value);
+  $('toAlt').style.display = $('altSrc').value.trim() ? '' : 'none';
   try { localStorage.setItem('src', src.value); } catch (e) {}
 }
 function openSrc() { $('srcBox').open = true; src.focus(); }
@@ -1524,7 +1626,7 @@ async function doPaste() {
         }
       } catch (e) { text = await navigator.clipboard.readText(); }
     } else text = await navigator.clipboard.readText();
-    if (text.trim()) { src.value = text; setView('edit'); update(); window.scrollTo(0, 0); return; }
+    if (text.trim()) { if (offerAsSolution(text)) return; src.value = text; setView('edit'); update(); window.scrollTo(0, 0); return; }
     if (img) { handleImage(img); return; }
     alert('클립보드가 비어 있습니다. Gemini 답변이나 스크린샷을 먼저 복사해 주세요.');
   } catch (e) {
@@ -1565,6 +1667,23 @@ $('menuAi').onclick = () => openAiDlg('');
 $('aiFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) handleImage(f); };
 $('typeBtn').onclick = openSrc;
 $('toStu').onclick = () => setMode(true);
+$('toAlt').onclick = () => setView('alt');
+$('jobRun').onclick = jobRun;
+$('jobClear').onclick = () => { jobSet('job_img', ''); jobSet('job_txt', ''); jobRender(); toast('비웠어요.', 2000); };
+$('jobTxt').addEventListener('input', () => jobSet('job_txt', $('jobTxt').value));
+$('jobPick').onclick = () => $('aiFile').click();
+$('srvTest').onclick = async () => {
+  if (!aiSaveForm()) return;
+  const c = srvCfg(); $('aiMsg').style.color = '';
+  if (!c.url || !c.code) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = '서버 주소와 접근 코드를 입력해 주세요.'; return; }
+  $('aiMsg').textContent = '서버 확인 중…';
+  try {
+    const res = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': c.code }, body: JSON.stringify({ ping: true }) });
+    const d = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((d && d.error) || ('서버 오류 (' + res.status + ')'));
+    $('aiMsg').style.color = '#1f9d55'; $('aiMsg').textContent = '서버에 연결됐어요. (AI: ' + (d.provider || '?') + ')';
+  } catch (e) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = e instanceof TypeError ? '서버에 연결하지 못했어요. 주소를 확인해 주세요.' : e.message; }
+};
 $('copyPrompt2').onclick = () => $('copyPrompt').click();
 $('menuBtn').onclick = e => { e.stopPropagation(); const m = $('menu'); m.style.display = m.style.display === 'none' ? 'flex' : 'none'; };
 $('menu').addEventListener('click', e => { if (e.target.closest('button')) $('menu').style.display = 'none'; });
@@ -1581,6 +1700,7 @@ out.style.fontSize = '22px'; stu.style.fontSize = '22px';
 
 try { src.value = localStorage.getItem('src') || ''; } catch (e) {}
 update();
+jobRender();
 takeShared();
 </script>
 </body>
