@@ -147,6 +147,9 @@
   @media (max-width:900px) { .hw { grid-template-columns:1fr; } }
   .hwfig { height:420px; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
   .hwfig img { max-width:100%; max-height:100%; object-fit:contain; }
+  .stalebar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; background:#fff7d6; border:1px solid #f0d878; color:#6b5300; border-radius:12px; padding:10px 14px; margin:0 0 12px; font-size:14px; line-height:1.5; text-align:left; }
+  .stalebar span { flex:1; min-width:200px; }
+
   /* 등급별 카톡 대화 풀이 */
   .row2 { display:flex; gap:8px; flex-wrap:wrap; }
   .ksetup { margin-top:10px; }
@@ -205,6 +208,7 @@
     <button id="mAlt">📐 다른 풀이 (그래프·도형)</button>
     <hr>
     <button id="menuRead">🖼 스크린샷을 AI로 읽기</button>
+    <button id="menuRegen">🔄 다른 풀이·대화 풀이 모두 다시 만들기</button>
     <button id="menuAi">⚙ AI 설정</button>
     <hr>
     <button id="copyPrompt2">Gemini용 형식 프롬프트 복사</button>
@@ -248,6 +252,7 @@
   </details>
   <section id="resultSec">
     <div class="rhead"><h2>변환 결과</h2><span style="flex:1"></span><button id="toHand">✍ 손글씨 풀이</button><button id="toAlt" style="display:none">📐 다른 풀이 보기</button><button id="toStu" class="primary">🎓 학생용으로 보기</button></div>
+    <div id="staleBar" class="stalebar" style="display:none"></div>
     <div id="out" class="math-text"></div>
     <div id="homeHand" style="display:none"></div>
   </section>
@@ -351,7 +356,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v9 · 2026-09-20 등급별 카톡 대화 풀이';
+const APP_VERSION = 'v10 · 2026-09-20 원문 일괄 적용';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1008,13 +1013,15 @@ function legendHTML(sp) {
 
 function renderAlt() {
   if (chatCtx) kPause();
+  saveAlt();
   const o = $('altOut');
   altSols = parseSolutions($('altSrc').value);
   if (!altSols.length) { o.innerHTML = '<div class="empty">2번 칸에 Gemini 답변을 붙여넣거나 “예시”를 눌러 보세요.</div>'; return; }
   altIdx = Math.min(altIdx, altSols.length - 1);
   const sol = altSols[altIdx], sp = sol.spec, chat = altView === 'chat';
 
-  let html = '<div class="tabs">';
+  let html = isStale() ? '<div class="stalebar">' + STALE_HTML + '</div>' : '';
+  html += '<div class="tabs">';
   altSols.forEach((s, i) => { html += '<button data-sol="' + i + '" class="' + (i === altIdx ? 'on' : '') + '">' + esc(s.title) + '</button>'; });
   html += '</div><div class="tabs"><span style="color:var(--muted);font-size:13px">보기</span><div class="seg">';
   html += '<button data-view="jsx" class="' + (!chat ? 'on' : '') + '">📈 그래프·도형</button>';
@@ -1328,13 +1335,18 @@ const ksleep = (ms, tok) => new Promise(r => setTimeout(() => r(tok === kc.token
 const inlineMath = t => render(t).replace(/<\/?p>/g, '');
 const kTime = idx => { const d = new Date(kc.base + Math.floor(idx / 2) * 60000); const h = d.getHours(); return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
-function chatMount(host, solText, sp, problemText) {
+function chatMount(host, solText, sp, problemText, opts) {
   kc.token++; kc.playing = false;
-  chatCtx = { host, solText, sp, problemText: problemText || '' };
-  kc.levels = chatParse(chatLoad(solText)); kc.lv = 0;
+  chatCtx = { host, solText, sp, problemText: problemText || '', opts };
+  let raw = chatLoad(solText), staleUsed = false;
+  if (!raw && opts && opts.home) {                    // 홈: 원문이 바뀌었으면 이전 대화를 "이전 내용" 표시와 함께 보여 준다
+    const d = derivedGet();
+    if (d && d.srcKey !== chatKey(solText)) { try { raw = JSON.parse(localStorage.getItem('chatStore') || '{}')[d.srcKey] || ''; staleUsed = !!raw; } catch (e) {} }
+  }
+  kc.levels = chatParse(raw); kc.lv = 0;
   const has = kc.levels.length > 0;
   const hasFig = (sp && !sp.empty) || !!capURL;
-  let h = '<div class="hw' + (hasFig ? '' : ' nofig') + '">';
+  let h = (staleUsed ? '<div class="stalebar">' + STALE_HTML + '</div>' : '') + '<div class="hw' + (hasFig ? '' : ' nofig') + '">';
   if (hasFig) h += '<div><div class="tabs" id="chFigTabs" style="margin-top:0"></div><div class="hwfig" id="chFig"></div><div class="animbar" id="chBar"></div><div class="gnote" id="chFigNote"></div></div>';
   h += '<div>';
   if (has) {
@@ -1356,7 +1368,7 @@ function chatMount(host, solText, sp, problemText) {
 function chatBodyText() { return (chatCtx.problemText ? chatCtx.problemText + '\n\n' : '') + chatCtx.solText; }
 function chatWire() {
   const R = id => $(id);
-  const remount = () => chatMount(chatCtx.host, chatCtx.solText, chatCtx.sp, chatCtx.problemText);
+  const remount = () => chatMount(chatCtx.host, chatCtx.solText, chatCtx.sp, chatCtx.problemText, chatCtx.opts);
   R('kCopyPrompt').onclick = async () => {
     try { await navigator.clipboard.writeText(chatPrompt(chatBodyText())); toast('프롬프트를 복사했어요. Gemini에 붙여넣으세요.', 3000); }
     catch (e) { toast('복사 권한이 없어요. 프롬프트는 다른 풀이 화면에서도 복사할 수 있어요.', 4000, true); }
@@ -1625,6 +1637,7 @@ function applyJobResult(data, imgURL) {
   $('altProblem').value = problem; $('altSrc').value = alt; altIdx = 0;
   capURL = imgURL; updateAltPrompt();
   if ((data.chat || '').trim()) chatSave(src.value, data.chat.trim());
+  derivedSet(src.value); saveAlt();
   jobSet('job_img', ''); jobSet('job_txt', ''); jobRender();
   setView('edit'); update(); window.scrollTo(0, 0);
   toast('정리 완료!' + (alt ? ' 다른 풀이(그래프·도형)도 만들었어요.' : ''), 5000);
@@ -1731,6 +1744,74 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(e => noteErr('서비스 워커', e.message));
 }
 
+/* ---------- 원문 일괄 적용: "이전 내용" 표시 + 모두 다시 만들기 ---------- */
+function derivedGet() { try { return JSON.parse(localStorage.getItem('derived') || 'null'); } catch (e) { return null; } }
+function derivedSet(text) { try { localStorage.setItem('derived', JSON.stringify({ srcKey: chatKey(text), at: Date.now() })); } catch (e) {} }
+function saveAlt() { try { localStorage.setItem('altSrc', $('altSrc').value); } catch (e) {} }
+function chatKeyHas(k) { try { return !!JSON.parse(localStorage.getItem('chatStore') || '{}')[k]; } catch (e) { return false; } }
+function isStale() {                                   // 다른 풀이·대화 풀이를 만든 뒤 원문이 바뀌었나
+  const d = derivedGet();
+  if (!d || !src.value.trim() || d.srcKey === chatKey(src.value)) return false;
+  return !!($('altSrc').value.trim() || chatKeyHas(d.srcKey));
+}
+const STALE_HTML = '<span>⚠️ <b>원문이 바뀌었어요.</b> 다른 풀이·대화 풀이는 <b>이전 내용</b>이에요.</span><button class="primary regenBtn">🔄 모두 다시 만들기</button>';
+function refreshStale() {
+  const b = $('staleBar'), st = isStale();
+  b.style.display = st ? 'flex' : 'none';
+  if (st) b.innerHTML = STALE_HTML + (capURL ? '<button class="figClearBtn">문제 그림 지우기</button>' : '');
+}
+function splitProblemSolution(text) {                  // 첫 "1단계."(또는 "정답:") 앞은 문제, 그 뒤는 풀이
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const i = lines.findIndex(l => stepStart(l) || ANS_RE.test(l));
+  if (i <= 0) return { problem: '', solution: text.trim() };
+  return { problem: lines.slice(0, i).join('\n').trim(), solution: lines.slice(i).join('\n').trim() };
+}
+function altPromptFor(problem, solution, hasImg) {
+  let t = ALT_PROMPT.replace('{문제}', () => (problem || '(원문 참고)') + '\n\n[원래 풀이 — 이것과는 다른 접근으로 풀어줘]\n' + solution);
+  if (hasImg) t = t.replace('[문제]', () => IMG_NOTE + '\n\n[문제]');
+  return t;
+}
+let regenBusy = false;
+async function regenAll() {
+  if (regenBusy) return;
+  const full = src.value.trim();
+  if (!full) { toast('원문이 비어 있어요.', 3000, true); return; }
+  if (!srvOn() && !aiCfg().key) { openAiDlg('다시 만들려면 AI 키(또는 서버)가 필요해요.'); toast('AI 설정을 먼저 해 주세요.', 3500, true); return; }
+  const { problem, solution } = splitProblemSolution(full);
+  regenBusy = true; toast('원문 기준으로 다른 풀이·대화 풀이를 다시 만드는 중… (30~90초)', 0);
+  try {
+    let imgBlob = null;
+    if (capURL) { try { imgBlob = await (await fetch(capURL)).blob(); } catch (e) {} }   // 문제 그림은 그대로 두고 함께 보낸다
+    let alt = '', chat = '';
+    if (srvOn()) {
+      const c = srvCfg(), body = { solutionText: solution, problemText: problem || full.slice(0, 300) };
+      if (imgBlob) body.problemImage = await imageToB64(imgBlob, 1400);
+      let res;
+      try { res = await fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': c.code }, body: JSON.stringify(body) }); }
+      catch (e) { throw new Error('서버에 연결하지 못했어요. 서버 주소와 인터넷 연결을 확인해 주세요.'); }
+      let data = null; try { data = await res.json(); } catch (e) {}
+      if (!res.ok) throw new Error((data && data.error) || ('서버 오류 (' + res.status + ')'));
+      alt = (data.alternatives || '').trim(); chat = (data.chat || '').trim();
+    } else {
+      alt = await aiAsk(altPromptFor(problem, solution, !!imgBlob), imgBlob);
+      chat = await aiAsk(chatPrompt(full), null);
+    }
+    const chatOk = chat && chatParse(chat).length > 0;
+    if (!alt && !chatOk) throw new Error('AI가 내용을 만들지 못했어요. 다시 시도해 주세요.');
+    if (alt) { $('altSrc').value = alt; altIdx = 0; $('altProblem').value = problem; updateAltPrompt(); }
+    if (chatOk) chatSave(src.value, chat);
+    derivedSet(src.value); saveAlt();
+    update();
+    if (document.body.classList.contains('alt')) renderAlt();
+    toast('다시 만들었어요!' + (alt ? ' 다른 풀이' : '') + (chatOk ? (alt ? '와 ' : ' ') + '대화 풀이가 원문에 맞게 바뀌었어요.' : ' 가 바뀌었어요.'), 5000);
+  } catch (e) { toast(e.message, 8000, true); noteErr('다시 만들기', e.message); }
+  finally { regenBusy = false; }
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('.regenBtn')) regenAll();
+  else if (e.target.closest('.figClearBtn')) { $('capClear').click(); refreshStale(); toast('문제 그림을 지웠어요.', 2500); }
+});
+
 /* ---------- 모드 · 이벤트 ---------- */
 /* 홈 결과를 손글씨 풀이로 보기 (수식 보기와 전환) */
 let homeMode = 'text';
@@ -1741,7 +1822,7 @@ function setHomeMode(m) {
   $('toHand').textContent = m === 'hand' ? '📄 수식으로 보기' : '✍ 손글씨 풀이';
   if (m === 'hand') {
     $('altOut').innerHTML = '';                       // 같은 이름의 요소가 겹치지 않도록 다른 풀이 화면의 손글씨 판을 비운다
-        chatMount($('homeHand'), src.value, null, '');
+        chatMount($('homeHand'), src.value, null, '', { home: true });
   } else { if (chatCtx) kPause(); $('homeHand').innerHTML = ''; }
 }
 function setView(v) {
@@ -1762,6 +1843,7 @@ function update() {
   if (homeMode === 'hand') setHomeMode('text');       // 내용이 바뀌면 손글씨 판은 닫고 수식 보기로 돌아간다
   out.innerHTML = render(src.value);
   $('toAlt').style.display = $('altSrc').value.trim() ? '' : 'none';
+  refreshStale();
   try { localStorage.setItem('src', src.value); } catch (e) {}
 }
 function openSrc() { $('srcBox').open = true; src.focus(); }
@@ -1806,7 +1888,8 @@ const RAW_SAMPLE = `조건 (가)에서는 x가 무한대로 갈 때, 분자의 �
 조건 (나)를 통해 f(x)와 g(x)의 최저차항과 계수들을 확인해서, 최종적으로 f(x) = 2x와 g(x) = x^3 + x^2을 구했어요.
 
 그래서 f(2) = 4, g(2) = 12가 되어, 합계는 16이 됩니다. 극한은 lim_(x->∞) (2x)/(x^3) = 0 이고 x² ≥ 0 입니다.`;
-$('sample').onclick = () => { src.value = RAW_SAMPLE; chatSave(RAW_SAMPLE, CHAT_SAMPLE); setView('edit'); update(); };
+$('sample').onclick = () => { src.value = RAW_SAMPLE; chatSave(RAW_SAMPLE, CHAT_SAMPLE); derivedSet(RAW_SAMPLE); setView('edit'); update(); };
+$('menuRegen').onclick = regenAll;
 $('sample2').onclick = $('sample').onclick;
 $('clear').onclick = () => { src.value = ''; setView('edit'); update(); };
 $('paste').onclick = doPaste;
@@ -1849,7 +1932,7 @@ $('copyPrompt').onclick = async () => {
 };
 out.style.fontSize = '22px'; stu.style.fontSize = '22px';
 
-try { src.value = localStorage.getItem('src') || ''; } catch (e) {}
+try { src.value = localStorage.getItem('src') || ''; $('altSrc').value = localStorage.getItem('altSrc') || ''; } catch (e) {}
 update();
 jobRender();
 takeShared();
