@@ -93,6 +93,18 @@ function timingSafeEqual(a, b) {
   return r === 0;
 }
 
+async function pickGeminiModel(key) {
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+    if (!res.ok) return '';
+    const d = await res.json();
+    const list = (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name).replace(/^models\//, ''))
+      .filter(n => /^gemini/i.test(n) && !/embedding|tts|image|live|audio|aqa|imagen|veo|robotics|computer-use|native-audio/i.test(n));
+    const score = n => { let s = 0; const v = n.match(/(\d+(?:[.-]\d+)?)/); if (v) s += parseFloat(v[1].replace('-', '.')) * 100; if (/flash/.test(n)) s += 150; if (/lite/.test(n)) s -= 30; if (/preview|exp/.test(n)) s -= 15; if (/-latest/.test(n)) s += 5; return s; };
+    return list.sort((a, b) => score(b) - score(a))[0] || '';
+  } catch (e) { return ''; }
+}
+
 async function callAI(env, prompt, imageB64) {
   const provider = (env.AI_PROVIDER || 'gemini').toLowerCase();
   if (provider === 'claude') {
@@ -109,14 +121,19 @@ async function callAI(env, prompt, imageB64) {
     if (!res.ok) throw new Error('AI ' + res.status + ' ' + ((data && data.error && data.error.message) || ''));
     return (data.content || []).map(p => p.text || '').join('');
   }
-  const model = env.AI_MODEL || 'gemini-2.5-flash';
+  const model = env.AI_MODEL || 'gemini-flash-latest';
   const parts = [{ text: prompt }];
   if (imageB64) parts.push({ inline_data: { mime_type: 'image/jpeg', data: imageB64 } });
-  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+  const call = m => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.AI_KEY },
     body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.2 } }),
   });
+  let res = await call(model);
+  if (res.status === 404) {                       // 모델 이름이 없으면 이 키로 쓸 수 있는 모델을 찾아 한 번 다시 시도한다
+    const pick = await pickGeminiModel(env.AI_KEY);
+    if (pick && pick !== model) res = await call(pick);
+  }
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error('AI ' + res.status + ' ' + ((data && data.error && data.error.message) || ''));
   return ((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).map(p => p.text || '').join('');

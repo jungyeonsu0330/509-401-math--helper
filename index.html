@@ -291,7 +291,9 @@
     <label for="aiKey">API 키</label>
     <input id="aiKey" type="password" autocomplete="off" placeholder="여기에만 붙여넣으세요">
     <label for="aiModel">모델 이름</label>
-    <input id="aiModel" autocomplete="off">
+    <input id="aiModel" autocomplete="off" list="aiModels">
+    <datalist id="aiModels"></datalist>
+    <div class="row" style="margin-top:8px"><button id="aiList">모델 목록 불러오기</button></div>
     <hr style="margin:18px 0 12px;border:0;border-top:1px solid var(--line)">
     <h3 style="font-size:16px">자동 정리 서버 (선택)</h3>
     <p>서버를 연결하면 <b>문제 캡처 + 풀이 글</b>을 보내 한 번에 정리합니다. 이때는 위의 AI 키가 필요 없고, 키는 서버에만 있습니다.</p>
@@ -356,7 +358,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v10 · 2026-09-20 원문 일괄 적용';
+const APP_VERSION = 'v11 · 2026-09-20 모델 이름 자동 복구';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1534,7 +1536,7 @@ function toast(msg, ms = 3500, bad = false) {
 }
 
 /* ---------- AI 연동 (스크린샷 읽기 · 풀이 만들기) ---------- */
-const AI_DEFAULTS = { gemini: 'gemini-2.5-flash', claude: 'claude-sonnet-5' };
+const AI_DEFAULTS = { gemini: 'gemini-flash-latest', claude: 'claude-sonnet-5' };   // 이름이 없으면 aiAsk가 사용 가능한 모델을 찾아 바꾼다
 let pendingImage = null;
 function aiCfg() {
   try {
@@ -1553,11 +1555,36 @@ async function imageToB64(img, max = 1600) {       // Blob 또는 canvas → 줄
 }
 function aiErrText(status, msg) {
   if (status === 401 || status === 403) return '키가 올바르지 않거나 이 모델을 쓸 권한이 없어요. AI 설정에서 키를 다시 확인해 주세요.';
-  if (status === 404) return '모델 이름을 찾지 못했어요. AI 설정의 모델 이름을 확인해 주세요.';
+  if (status === 404) return '모델 이름을 찾지 못했어요. AI 설정에서 “모델 목록 불러오기”를 눌러 사용할 수 있는 모델을 골라 주세요.';
   if (status === 429) return '사용 한도를 넘었어요. 잠시 뒤 다시 시도하거나 요금·한도를 확인해 주세요.';
   if (status >= 500) return 'AI 서버가 일시적으로 불안정해요. 잠시 뒤 다시 시도해 주세요.';
   return 'AI가 요청을 처리하지 못했어요 (' + status + ')' + (msg ? ': ' + String(msg).slice(0, 160) : '');
 }
+/* 이 키로 쓸 수 있는 모델 목록을 가져온다 (모델 이름이 틀렸을 때 고르기 위해) */
+async function listModels(provider, key) {
+  const fail = async res => { const d = await res.json().catch(() => null); throw new Error(aiErrText(res.status, d && d.error && (d.error.message || d.error))); };
+  if (provider === 'gemini') {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+    if (!res.ok) await fail(res);
+    const d = await res.json();
+    return (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name).replace(/^models\//, ''))
+      .filter(n => /^gemini/i.test(n) && !/embedding|tts|image|live|audio|aqa|imagen|veo|robotics|computer-use|native-audio/i.test(n));
+  }
+  const res = await fetch('https://api.anthropic.com/v1/models?limit=100', { headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' } });
+  if (!res.ok) await fail(res);
+  const d = await res.json();
+  return (d.data || []).map(m => m.id).filter(Boolean);
+}
+function pickModel(list, provider) {         // 빠르고 저렴한 쪽(flash/sonnet)의 최신 안정판을 우선한다
+  const score = n => {
+    let s = 0; const v = n.match(/(\d+(?:[.-]\d+)?)/); if (v) s += parseFloat(v[1].replace('-', '.')) * 100;
+    if (provider === 'gemini') { if (/flash/.test(n)) s += 150; if (/lite/.test(n)) s -= 30; if (/preview|exp/.test(n)) s -= 15; if (/-latest/.test(n)) s += 5; }
+    else { if (/sonnet/.test(n)) s += 150; if (/haiku/.test(n)) s += 60; if (/opus/.test(n)) s += 20; }
+    return s;
+  };
+  return list.slice().sort((a, b) => score(b) - score(a))[0] || '';
+}
+
 async function aiAsk(prompt, image) {
   const cfg = aiCfg();
   if (!cfg.key) throw Object.assign(new Error('AI 키가 없어요'), { noKey: true });
@@ -1567,10 +1594,20 @@ async function aiAsk(prompt, image) {
     if (cfg.provider === 'gemini') {
       const parts = [{ text: prompt }];
       if (b64) parts.push({ inline_data: { mime_type: 'image/jpeg', data: b64 } });
-      res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.model) + ':generateContent', {
+      const callG = model => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.key },
         body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0.2 } }),
       });
+      res = await callG(cfg.model);
+      if (res.status === 404) {                 // 모델 이름이 없으면: 이 키로 쓸 수 있는 모델을 찾아 한 번 다시 시도하고 기억해 둔다
+        try {
+          const list = await listModels('gemini', cfg.key), pick = pickModel(list, 'gemini');
+          if (pick && pick !== cfg.model) {
+            res = await callG(pick);
+            if (res.ok) { try { localStorage.setItem('aiModel_gemini', pick); } catch (e) {} toast('모델을 “' + pick + '”(으)로 자동 바꿨어요.', 5000); }
+          }
+        } catch (e) { /* 목록을 못 가져오면 원래 오류를 그대로 보여 준다 */ }
+      }
     } else {
       const content = [];
       if (b64) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } });
@@ -1704,8 +1741,24 @@ $('aiClose').onclick = () => { $('aiDlg').style.display = 'none'; };
 $('aiTest').onclick = async () => {
   if (!aiSaveForm()) return;
   $('aiMsg').style.color = ''; $('aiMsg').textContent = '연결 확인 중…';
-  try { const r = await aiAsk('숫자 2와 3을 더한 값만 숫자로 답해.'); $('aiMsg').style.color = '#1f9d55'; $('aiMsg').textContent = '연결됐어요. (AI 응답: ' + r.slice(0, 40) + ')'; }
-  catch (e) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = e.noKey ? '키를 입력해 주세요.' : e.message; }
+  try {
+    const r = await aiAsk('숫자 2와 3을 더한 값만 숫자로 답해.');
+    $('aiModel').value = aiCfg().model;      // 자동으로 바뀐 모델이 있으면 칸에도 반영
+    $('aiMsg').style.color = '#1f9d55'; $('aiMsg').textContent = '연결됐어요. (모델: ' + aiCfg().model + ' / AI 응답: ' + r.slice(0, 40) + ')';
+  } catch (e) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = e.noKey ? '키를 입력해 주세요.' : e.message; }
+};
+$('aiList').onclick = async () => {
+  const p = $('aiProv').value, key = $('aiKey').value.trim();
+  if (!key) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = '먼저 API 키를 입력해 주세요.'; return; }
+  $('aiMsg').style.color = ''; $('aiMsg').textContent = '모델 목록을 가져오는 중…';
+  try {
+    const list = await listModels(p, key);
+    if (!list.length) throw new Error('이 키로 쓸 수 있는 모델을 찾지 못했어요. 키의 프로젝트에서 Generative Language API가 켜져 있는지 확인해 주세요.');
+    $('aiModels').innerHTML = list.map(n => '<option value="' + n + '">').join('');
+    const pick = pickModel(list, p); $('aiModel').value = pick;
+    $('aiMsg').style.color = '#1f9d55';
+    $('aiMsg').textContent = list.length + '개 중 “' + pick + '”을(를) 골랐어요. 다른 모델은 모델 칸을 눌러 목록에서 고르세요. 저장한 뒤 연결 테스트를 눌러 주세요.\n' + list.slice(0, 12).join(', ') + (list.length > 12 ? ' …' : '');
+  } catch (e) { $('aiMsg').style.color = '#d33'; $('aiMsg').textContent = e.message; }
 };
 
 /* 다른 풀이: 프롬프트와 (있으면) 도형 이미지를 AI에 바로 보내 3가지 풀이를 만든다 */
