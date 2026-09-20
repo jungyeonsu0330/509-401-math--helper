@@ -77,6 +77,11 @@
   .chip { padding:3px 10px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
   .chip i { display:inline-block; width:10px; height:10px; border-radius:5px; margin-right:6px; }
 
+  #diag { position:fixed; left:0; right:0; bottom:0; max-height:75vh; background:var(--card); border-top:2px solid var(--accent); z-index:20; box-shadow:0 -6px 24px rgba(0,0,0,.25); display:flex; flex-direction:column; }
+  #diag[style*="none"] { display:none !important; }
+  .diaghead { display:flex; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  #diagOut { margin:0; padding:12px 14px; overflow:auto; white-space:pre-wrap; font:13px/1.65 ui-monospace,Consolas,monospace; }
+
   /* 캡처 이미지 */
   .capstage { margin:8px 0; overflow:auto; background:var(--bg); border-radius:8px; padding:6px; }
   #capCanvas { touch-action:none; cursor:crosshair; display:block; margin:0 auto; }
@@ -119,6 +124,7 @@
   <label style="font-size:13px;color:var(--muted)">글자
     <input id="size" type="range" min="14" max="34" value="20">
   </label>
+  <button id="diagBtn">진단</button>
   <button id="paste">붙여넣기</button>
   <button id="sample">예시</button>
   <button id="clear">지우기</button>
@@ -150,6 +156,14 @@
 </div>
 
 <div id="student"></div>
+
+<div id="diag" style="display:none">
+  <div class="diaghead"><b>진단</b><span style="flex:1"></span>
+    <button id="diagRun" class="primary">환경 점검 실행</button>
+    <button id="diagCopy">결과 복사</button>
+    <button id="diagClose">닫기</button></div>
+  <pre id="diagOut"></pre>
+</div>
 
 <div id="alt">
   <details class="altbox" open>
@@ -188,6 +202,16 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const APP_VERSION = 'v3 · 2026-09-20 진단 추가';
+/* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
+const ERRS = [];
+function noteErr(kind, msg) {
+  ERRS.push(new Date().toLocaleTimeString() + ' [' + kind + '] ' + msg);
+  const b = document.getElementById('diagBtn');
+  if (b) { b.textContent = '진단 (오류 ' + ERRS.length + ')'; b.style.color = '#d33'; }
+}
+addEventListener('error', e => noteErr('오류', (e.message || '') + (e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : '')));
+addEventListener('unhandledrejection', e => noteErr('약속 실패', (e.reason && e.reason.message) || String(e.reason)));
 const src = $('src'), out = $('out'), stu = $('student');
 
 const SAMPLE = `문제 요약: 다항함수 $f(x)$, $g(x)$가 두 조건을 만족할 때 $f(2)+g(2)$의 값을 구한다.
@@ -1064,6 +1088,76 @@ function hwReset() {
   hw.i = 0; const pen = $('hwPen'); if (pen) pen.style.display = 'none';
   hwShowStep(0);
 }
+
+/* ---------- 진단 ---------- */
+const withTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg)), ms))]);
+const DIAG_CHECKS = [
+  ['브라우저', async () => {
+    const ua = navigator.userAgent;
+    const inapp = /KAKAOTALK|NAVER|FBAN|FBAV|Instagram|Line\/|DaumApps|; wv\)/i.test(ua);
+    return { ok: !inapp, info: (inapp ? '앱 안 브라우저로 보입니다. 크롬이나 삼성 인터넷에서 직접 열어 보세요. ' : '') + ua };
+  }],
+  ['화면', async () => ({ ok: true, info: innerWidth + 'x' + innerHeight + ' css px, 배율 ' + devicePixelRatio + ', 터치 ' + navigator.maxTouchPoints })],
+  ['저장소(localStorage)', async () => { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return { ok: true, info: '사용 가능' }; }],
+  ['캔버스 읽기(도형 자동 찾기)', async () => {
+    const c = document.createElement('canvas'); c.width = c.height = 4;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.fillRect(0, 0, 4, 4);
+    return { ok: g.getImageData(0, 0, 1, 1).data[3] === 255, info: 'getImageData 동작' };
+  }],
+  ['클립보드 API', async () => ({ ok: !!(navigator.clipboard && navigator.clipboard.readText), info: navigator.clipboard ? '있음 (붙여넣기 버튼은 권한을 물을 수 있음)' : '없음: 직접 길게 눌러 붙여넣기 하세요' })],
+  ['애니메이션 프레임(손글씨)', async () => {
+    const n = await new Promise(r => { let k = 0; const t0 = performance.now(); const f = now => { k++; if (now - t0 > 600) r(k); else requestAnimationFrame(f); }; requestAnimationFrame(f); setTimeout(() => r(k), 1500); });
+    return { ok: n > 5, info: '600ms 동안 ' + n + '프레임' + (n <= 5 ? ' — 애니메이션이 멈춰 있습니다(화면이 뒤에 있거나 절전 모드일 수 있음)' : '') };
+  }],
+  ['마스크 효과(글자 써지는 효과)', async () => {
+    const ok = CSS.supports('mask-image', 'linear-gradient(#000,transparent)') || CSS.supports('-webkit-mask-image', 'linear-gradient(#000,transparent)');
+    return { ok, info: ok ? '지원' : '미지원: 글자가 한 번에 나올 수 있음' };
+  }],
+  ['손글씨 글꼴', async () => {
+    const faces = await withTimeout(document.fonts.load('20px "Nanum Pen Script"', '가'), 10000, '10초 안에 글꼴을 못 불러옴');
+    const ok = faces.length > 0;
+    return { ok, info: ok ? '나눔 펜 스크립트 로드됨' : '글꼴을 못 불러옴(기본 글꼴로 표시)' };
+  }],
+  ['KaTeX(수식)', async () => ({ ok: typeof katex !== 'undefined', info: typeof katex !== 'undefined' ? '로드됨' : '못 불러옴' })],
+  ['JSXGraph 로드', async () => {
+    loadCss('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraph.css');
+    await withTimeout(loadScript('https://cdn.jsdelivr.net/npm/jsxgraph@1.9.2/distrib/jsxgraphcore.js'), 15000, '15초 안에 못 불러옴');
+    return { ok: typeof JXG !== 'undefined', info: '로드됨' };
+  }],
+  ['Desmos 로드', async () => {
+    await withTimeout(loadScript('https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6'), 15000, '15초 안에 못 불러옴');
+    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-9999px;width:300px;height:200px'; document.body.appendChild(d);
+    try { Desmos.GraphingCalculator(d, { expressions: false }); } finally { d.remove(); }
+    return { ok: true, info: '계산기 생성됨' };
+  }],
+  ['GeoGebra 로드', async () => {
+    await withTimeout(loadScript('https://www.geogebra.org/apps/deployggb.js'), 15000, '15초 안에 못 불러옴');
+    const d = document.createElement('div'); d.id = 'ggbdiag'; d.style.cssText = 'position:fixed;left:-9999px;top:0;width:300px;height:200px'; document.body.appendChild(d);
+    const t0 = performance.now();
+    try {
+      await withTimeout(new Promise(res => new GGBApplet({ appName: 'classic', perspective: 'G', width: 300, height: 200, appletOnLoad: res }, true).inject('ggbdiag')), 25000, '25초 안에 GeoGebra가 응답하지 않음');
+    } finally { d.remove(); }
+    return { ok: true, info: '앱 생성됨 (' + Math.round(performance.now() - t0) + 'ms)' };
+  }],
+];
+async function runDiag() {
+  const out = $('diagOut'); const lines = [];
+  const show = () => { out.textContent = '앱 버전: ' + APP_VERSION + '\n주소: ' + location.href + '\n\n' + lines.join('\n') + (ERRS.length ? '\n\n[기록된 오류]\n' + ERRS.join('\n') : '\n\n[기록된 오류] 없음'); };
+  for (const [name, fn] of DIAG_CHECKS) {
+    lines.push('… ' + name); show();
+    try { const r = await fn(); lines[lines.length - 1] = (r.ok ? '✓ ' : '✗ ') + name + ' — ' + r.info; }
+    catch (e) { lines[lines.length - 1] = '✗ ' + name + ' — ' + e.message; }
+    show();
+  }
+  lines.push('\n점검 끝. “결과 복사”를 눌러 붙여넣거나 이 화면을 캡처해서 보내 주세요.'); show();
+}
+$('diagBtn').onclick = () => { const d = $('diag'); d.style.display = d.style.display === 'none' ? 'flex' : 'none'; if (d.style.display === 'flex') { $('diagOut').textContent = '앱 버전: ' + APP_VERSION + '\n주소: ' + location.href + '\n\n“환경 점검 실행”을 누르세요.' + (ERRS.length ? '\n\n[기록된 오류]\n' + ERRS.join('\n') : ''); } };
+$('diagClose').onclick = () => { $('diag').style.display = 'none'; };
+$('diagRun').onclick = runDiag;
+$('diagCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('diagOut').textContent); $('diagCopy').textContent = '복사됨'; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($('diagOut')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('diagCopy').textContent = '선택됨: 길게 눌러 복사'; }
+};
 
 /* ---------- 모드 · 이벤트 ---------- */
 function setView(v) {
