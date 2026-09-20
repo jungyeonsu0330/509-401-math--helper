@@ -93,16 +93,16 @@ function timingSafeEqual(a, b) {
   return r === 0;
 }
 
-async function pickGeminiModel(key) {
+async function rankGeminiModels(key) {
   try {
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
-    if (!res.ok) return '';
+    if (!res.ok) return [];
     const d = await res.json();
     const list = (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name).replace(/^models\//, ''))
       .filter(n => /^gemini/i.test(n) && !/embedding|tts|image|live|audio|aqa|imagen|veo|robotics|computer-use|native-audio/i.test(n));
     const score = n => { let s = 0; const v = n.match(/(\d+(?:[.-]\d+)?)/); if (v) s += parseFloat(v[1].replace('-', '.')) * 100; if (/flash/.test(n)) s += 150; if (/lite/.test(n)) s -= 30; if (/preview|exp/.test(n)) s -= 15; if (/-latest/.test(n)) s += 5; return s; };
-    return list.sort((a, b) => score(b) - score(a))[0] || '';
-  } catch (e) { return ''; }
+    return list.sort((a, b) => score(b) - score(a));
+  } catch (e) { return []; }
 }
 
 async function callAI(env, prompt, imageB64) {
@@ -131,8 +131,15 @@ async function callAI(env, prompt, imageB64) {
   });
   let res = await call(model);
   if (res.status === 404) {                       // 모델 이름이 없으면 이 키로 쓸 수 있는 모델을 찾아 한 번 다시 시도한다
-    const pick = await pickGeminiModel(env.AI_KEY);
+    const pick = (await rankGeminiModels(env.AI_KEY))[0];
     if (pick && pick !== model) res = await call(pick);
+  }
+  if (res.status >= 500) {                        // 서버가 바쁠 때: 잠깐 쉬었다가 두 번 다시 시도
+    for (const wait of [1500, 3500]) { await new Promise(r => setTimeout(r, wait)); res = await call(model); if (res.status < 500) break; }
+  }
+  if (res.status >= 500 || res.status === 429) {  // 그래도 안 되면 다른 모델을 차례로 시도
+    const others = (await rankGeminiModels(env.AI_KEY)).filter(n => n !== model).slice(0, 3);
+    for (const m of others) { const r2 = await call(m); if (r2.ok) { res = r2; break; } }
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error('AI ' + res.status + ' ' + ((data && data.error && data.error.message) || ''));

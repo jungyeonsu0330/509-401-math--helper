@@ -358,7 +358,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const APP_VERSION = 'v11 · 2026-09-20 모델 이름 자동 복구';
+const APP_VERSION = 'v12 · 2026-09-20 서버 바쁨 자동 재시도';
 /* 오류를 조용히 삼키지 않고 모아 둔다 (진단 화면에서 표시) */
 const ERRS = [];
 function noteErr(kind, msg) {
@@ -1557,7 +1557,7 @@ function aiErrText(status, msg) {
   if (status === 401 || status === 403) return '키가 올바르지 않거나 이 모델을 쓸 권한이 없어요. AI 설정에서 키를 다시 확인해 주세요.';
   if (status === 404) return '모델 이름을 찾지 못했어요. AI 설정에서 “모델 목록 불러오기”를 눌러 사용할 수 있는 모델을 골라 주세요.';
   if (status === 429) return '사용 한도를 넘었어요. 잠시 뒤 다시 시도하거나 요금·한도를 확인해 주세요.';
-  if (status >= 500) return 'AI 서버가 일시적으로 불안정해요. 잠시 뒤 다시 시도해 주세요.';
+  if (status >= 500) return 'AI 서버가 바빠서 응답하지 못했어요(' + status + '). 몇 번 자동으로 다시 시도했지만 안 됐어요. 1~2분 뒤에 다시 하거나 AI 설정에서 다른 모델을 골라 보세요.' + (msg ? '\n(' + String(msg).slice(0, 120) + ')' : '');
   return 'AI가 요청을 처리하지 못했어요 (' + status + ')' + (msg ? ': ' + String(msg).slice(0, 160) : '');
 }
 /* 이 키로 쓸 수 있는 모델 목록을 가져온다 (모델 이름이 틀렸을 때 고르기 위해) */
@@ -1575,15 +1575,16 @@ async function listModels(provider, key) {
   const d = await res.json();
   return (d.data || []).map(m => m.id).filter(Boolean);
 }
-function pickModel(list, provider) {         // 빠르고 저렴한 쪽(flash/sonnet)의 최신 안정판을 우선한다
+function rankModels(list, provider) {        // 빠르고 저렴한 쪽(flash/sonnet)의 최신 안정판을 앞에 둔다
   const score = n => {
     let s = 0; const v = n.match(/(\d+(?:[.-]\d+)?)/); if (v) s += parseFloat(v[1].replace('-', '.')) * 100;
     if (provider === 'gemini') { if (/flash/.test(n)) s += 150; if (/lite/.test(n)) s -= 30; if (/preview|exp/.test(n)) s -= 15; if (/-latest/.test(n)) s += 5; }
     else { if (/sonnet/.test(n)) s += 150; if (/haiku/.test(n)) s += 60; if (/opus/.test(n)) s += 20; }
     return s;
   };
-  return list.slice().sort((a, b) => score(b) - score(a))[0] || '';
+  return list.slice().sort((a, b) => score(b) - score(a));
 }
+const pickModel = (list, provider) => rankModels(list, provider)[0] || '';
 
 async function aiAsk(prompt, image) {
   const cfg = aiCfg();
@@ -1605,6 +1606,18 @@ async function aiAsk(prompt, image) {
           if (pick && pick !== cfg.model) {
             res = await callG(pick);
             if (res.ok) { try { localStorage.setItem('aiModel_gemini', pick); } catch (e) {} toast('모델을 “' + pick + '”(으)로 자동 바꿨어요.', 5000); }
+          }
+        } catch (e) { /* 목록을 못 가져오면 원래 오류를 그대로 보여 준다 */ }
+      }
+      if (res.status >= 500) {                  // 서버가 일시적으로 바쁠 때: 잠깐 쉬었다가 두 번 다시 시도
+        for (const wait of [1500, 3500]) { await new Promise(r => setTimeout(r, wait)); res = await callG(cfg.model); if (res.status < 500) break; }
+      }
+      if (res.status >= 500 || res.status === 429) {   // 그래도 안 되면 이 키로 쓸 수 있는 다른 모델을 차례로 시도 (일시적이라 저장하지는 않는다)
+        try {
+          const others = rankModels(await listModels('gemini', cfg.key), 'gemini').filter(n => n !== cfg.model).slice(0, 3);
+          for (const m of others) {
+            const r2 = await callG(m);
+            if (r2.ok) { res = r2; toast('“' + cfg.model + '”이 바빠서 “' + m + '”로 처리했어요.', 5000); break; }
           }
         } catch (e) { /* 목록을 못 가져오면 원래 오류를 그대로 보여 준다 */ }
       }
